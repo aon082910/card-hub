@@ -2,15 +2,27 @@
 //
 // 'manual' - no automatic lookup, you enter values by hand.
 // 'tcgdex' - free, keyless, live Pokemon TCG pricing (TCGplayer USD via api.tcgdex.net).
-//            Works automatically for any card with category=tcg and a recognizable name.
 // 'ygoprodeck' - free, keyless, live Yu-Gi-Oh pricing (TCGplayer via db.ygoprodeck.com).
-// 'pokewallet' - Pokemon TCG pricing via pokewallet.io - requires a free API key you
-//            register yourself and paste into Settings.
-// 'ebay' / 'tcgplayer' - documented extension points requiring your own developer
-//            credentials; not implemented (see below).
+// 'scryfall' - free, keyless, live Magic: The Gathering pricing (USD via Scryfall).
+// 'cardhoarder' - free, keyless, Magic: The Gathering MTGO ticket pricing (Scryfall
+//            already aggregates Cardhoarder's tix price per print - no separate API needed).
+// 'cardkingdom' - free, keyless, Magic: The Gathering retail pricing from Card Kingdom's
+//            public bulk pricelist (cached in-process, refreshed every 12h).
+// 'pokewallet' - Pokemon TCG pricing via pokewallet.io - requires a free API key.
+// 'ebay' - active-listing median price via eBay's Browse API (client_credentials app
+//            token) - requires an eBay developer app Client ID/Secret. Note: this is
+//            asking-price data from currently active listings, not sold comps - eBay's
+//            sold-comps API (Marketplace Insights) requires separate limited approval
+//            most developer accounts don't have.
+// 'tcgplayer' - direct TCGplayer pricing - requires a TCGplayer partner-program app
+//            (client_id/secret). Implemented per TCGplayer's published API contract;
+//            unverified against a live account (no partner credentials available here).
 
 const { getSetting } = require('../db');
-const { searchPokemon, getPokemonCard, searchYugioh, pokewalletLookup, searchMagic } = require('./cardLookup');
+const {
+  searchPokemon, getPokemonCard, searchYugioh, pokewalletLookup, searchMagic,
+  findCardKingdomPrice, ebaySearchActiveListings, tcgplayerLookup,
+} = require('./cardLookup');
 
 async function manualProvider() {
   throw new Error('Manual pricing is selected - no automatic lookup is available. Enter a value directly on the card.');
@@ -63,21 +75,49 @@ async function scryfallProvider(card) {
   return pick.marketPriceUsd;
 }
 
-async function ebayProvider() {
+async function cardhoarderProvider(card) {
+  const term = cardSearchTerm(card);
+  if (!term) throw new Error('Card needs a Player/Character or Set Name to look up a price.');
+  const results = await searchMagic(term);
+  if (!results.length) throw new Error(`No Scryfall match found for "${term}".`);
+  const byNumber = card.card_number ? results.find((r) => r.number === String(card.card_number)) : null;
+  const pick = byNumber || results[0];
+  if (pick.priceTixCardhoarder == null) throw new Error(`Found "${pick.name}", but no Cardhoarder (MTGO ticket) price is listed for it.`);
+  return pick.priceTixCardhoarder;
+}
+
+async function cardkingdomProvider(card) {
+  const term = cardSearchTerm(card);
+  if (!term) throw new Error('Card needs a Player/Character or Set Name to look up a price.');
+  const price = await findCardKingdomPrice(term);
+  if (price == null) throw new Error(`No Card Kingdom listing found for "${term}".`);
+  return price;
+}
+
+async function ebayProvider(card) {
   const clientId = getSetting('ebay_client_id');
   const clientSecret = getSetting('ebay_client_secret');
   if (!clientId || !clientSecret) {
     throw new Error('eBay price lookup requires a Client ID and Client Secret in Settings (register a developer app at developer.ebay.com).');
   }
-  throw new Error('eBay credentials are set, but live lookup is not yet implemented - see server/src/lib/priceProviders.js');
+  const term = cardSearchTerm(card);
+  if (!term) throw new Error('Card needs a Player/Character or Set Name to look up a price.');
+  const { medianPrice, sampleSize } = await ebaySearchActiveListings(term, clientId, clientSecret);
+  if (medianPrice == null) throw new Error(`No active eBay listings found for "${term}".`);
+  if (sampleSize < 3) throw new Error(`Only ${sampleSize} active eBay listing(s) found for "${term}" - too few for a reliable estimate.`);
+  return medianPrice;
 }
 
-async function tcgplayerProvider() {
-  const apiKey = getSetting('price_provider_api_key');
-  if (!apiKey) {
-    throw new Error('TCGplayer price lookup requires an API key in Settings (register at docs.tcgplayer.com).');
+async function tcgplayerProvider(card) {
+  const clientId = getSetting('tcgplayer_client_id');
+  const clientSecret = getSetting('tcgplayer_client_secret');
+  if (!clientId || !clientSecret) {
+    throw new Error('TCGplayer price lookup requires a Client ID and Client Secret in Settings (apply for partner API access at docs.tcgplayer.com).');
   }
-  throw new Error('TCGplayer credentials are set, but live lookup is not yet implemented - see server/src/lib/priceProviders.js');
+  const term = cardSearchTerm(card);
+  if (!term) throw new Error('Card needs a Player/Character or Set Name to look up a price.');
+  const { marketPrice } = await tcgplayerLookup(term, clientId, clientSecret);
+  return marketPrice;
 }
 
 const PROVIDERS = {
@@ -86,6 +126,8 @@ const PROVIDERS = {
   ygoprodeck: ygoprodeckProvider,
   pokewallet: pokewalletProvider,
   scryfall: scryfallProvider,
+  cardhoarder: cardhoarderProvider,
+  cardkingdom: cardkingdomProvider,
   ebay: ebayProvider,
   tcgplayer: tcgplayerProvider,
 };

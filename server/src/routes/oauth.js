@@ -15,7 +15,7 @@ router.get('/ebay/connect', (req, res) => {
   if (!clientId || !redirectUri) {
     return res.status(400).json({ error: 'Set ebay_client_id and ebay_redirect_uri in Settings first.' });
   }
-  const scope = encodeURIComponent('https://api.ebay.com/oauth/api_scope/sell.inventory');
+  const scope = encodeURIComponent('https://api.ebay.com/oauth/api_scope/sell.inventory https://api.ebay.com/oauth/api_scope/sell.fulfillment');
   const url = `https://auth.ebay.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}`;
   res.json({ url });
 });
@@ -40,6 +40,7 @@ router.get('/ebay/callback', async (req, res) => {
     if (!tokenRes.ok) throw new Error(tokenJson.error_description || 'token exchange failed');
     setSetting('ebay_access_token', tokenJson.access_token);
     setSetting('ebay_refresh_token', tokenJson.refresh_token);
+    setSetting('ebay_token_expires_at', Date.now() + (tokenJson.expires_in - 60) * 1000);
     setSetting('ebay_connected', true);
     res.send('<html><body>eBay connected. You can close this window.</body></html>');
   } catch (e) {

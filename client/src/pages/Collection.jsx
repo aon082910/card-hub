@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 function loadSavedViews() {
   try { return JSON.parse(localStorage.getItem('card-hub-views') || '[]'); } catch { return []; }
@@ -10,6 +11,7 @@ function persistSavedViews(views) {
 }
 
 export default function Collection() {
+  const { t } = useLanguage();
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState('');
@@ -87,27 +89,27 @@ export default function Collection() {
   return (
     <div>
       <div className="page-header">
-        <h1>Collection ({total})</h1>
-        <Link className="btn primary" to="/collection/new">+ Add Card</Link>
+        <h1>{t('collection_title')} ({total})</h1>
+        <Link className="btn primary" to="/collection/new">{t('dashboard_add_card')}</Link>
       </div>
 
       <div className="filter-bar">
-        <input placeholder="Search player, set, tags..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <input placeholder={t('collection_search')} value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option>
-          <option value="sports">Sports</option>
-          <option value="tcg">TCG</option>
-          <option value="other">Other</option>
+          <option value="">{t('collection_all_categories')}</option>
+          <option value="sports">{t('category_sports')}</option>
+          <option value="tcg">{t('category_tcg')}</option>
+          <option value="other">{t('category_other')}</option>
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          <option value="owned">Owned</option>
-          <option value="wanted">Wanted</option>
-          <option value="listed">Listed</option>
-          <option value="sold">Sold</option>
-          <option value="archived">Archived</option>
+          <option value="">{t('collection_all_statuses')}</option>
+          <option value="owned">{t('status_owned')}</option>
+          <option value="wanted">{t('status_wanted')}</option>
+          <option value="listed">{t('status_listed')}</option>
+          <option value="sold">{t('status_sold')}</option>
+          <option value="archived">{t('status_archived')}</option>
         </select>
-        <button className="btn" onClick={saveCurrentView}>💾 Save View</button>
+        <button className="btn" onClick={saveCurrentView}>💾 {t('collection_save_view')}</button>
       </div>
 
       {views.length > 0 && (
@@ -123,14 +125,14 @@ export default function Collection() {
 
       {selected.size > 0 && (
         <div className="bulk-bar">
-          <span>{selected.size} selected</span>
+          <span>{selected.size} {t('collection_selected')}</span>
           <select onChange={(e) => { if (e.target.value) { runBulk('set_status', e.target.value); e.target.value = ''; } }} defaultValue="">
             <option value="" disabled>Set status...</option>
-            <option value="owned">Owned</option>
-            <option value="wanted">Wanted</option>
-            <option value="listed">Listed</option>
-            <option value="sold">Sold</option>
-            <option value="archived">Archived</option>
+            <option value="owned">{t('status_owned')}</option>
+            <option value="wanted">{t('status_wanted')}</option>
+            <option value="listed">{t('status_listed')}</option>
+            <option value="sold">{t('status_sold')}</option>
+            <option value="archived">{t('status_archived')}</option>
           </select>
           <input placeholder="Add tag..." value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} style={{ width: 140 }} />
           <button className="btn small" onClick={() => { runBulk('add_tag', bulkTag); setBulkTag(''); }}>Add Tag</button>
@@ -150,14 +152,14 @@ export default function Collection() {
           <thead>
             <tr>
               <th><input type="checkbox" checked={rows.length > 0 && selected.size === rows.length} onChange={toggleSelectAll} /></th>
-              <th className="sortable" onClick={() => toggleSort('player_or_character')}>Player/Character{sortIndicator('player_or_character')}</th>
-              <th>Set</th>
-              <th className="sortable" onClick={() => toggleSort('year')}>Year{sortIndicator('year')}</th>
-              <th>Grade</th>
-              <th>Qty</th>
-              <th className="sortable" onClick={() => toggleSort('cost_basis')}>Cost{sortIndicator('cost_basis')}</th>
-              <th className="sortable" onClick={() => toggleSort('current_value')}>Value{sortIndicator('current_value')}</th>
-              <th>Status</th>
+              <th className="sortable" onClick={() => toggleSort('player_or_character')}>{t('collection_col_player')}{sortIndicator('player_or_character')}</th>
+              <th>{t('collection_col_set')}</th>
+              <th className="sortable" onClick={() => toggleSort('year')}>{t('collection_col_year')}{sortIndicator('year')}</th>
+              <th>{t('collection_col_grade')}</th>
+              <th>{t('collection_col_qty')}</th>
+              <th className="sortable" onClick={() => toggleSort('cost_basis')}>{t('collection_col_cost')}{sortIndicator('cost_basis')}</th>
+              <th className="sortable" onClick={() => toggleSort('current_value')}>{t('collection_col_value')}{sortIndicator('current_value')}</th>
+              <th>{t('collection_col_status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -178,7 +180,7 @@ export default function Collection() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>No cards found</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>{t('collection_no_cards')}</td></tr>
             )}
           </tbody>
         </table>

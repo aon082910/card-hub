@@ -43,6 +43,8 @@ export const api = {
   createListing: (data) => request('/listings', { method: 'POST', body: JSON.stringify(data) }),
   updateListing: (id, data) => request(`/listings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteListing: (id) => request(`/listings/${id}`, { method: 'DELETE' }),
+  pushEbayListing: (id) => request(`/listings/${id}/push-ebay`, { method: 'POST' }),
+  syncEbayListing: (id) => request(`/listings/${id}/sync-ebay`, { method: 'POST' }),
 
   listSets: () => request('/sets'),
   getSet: (id) => request(`/sets/${id}`),

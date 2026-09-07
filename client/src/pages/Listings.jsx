@@ -5,6 +5,8 @@ export default function Listings() {
   const [listings, setListings] = useState([]);
   const [cards, setCards] = useState([]);
   const [form, setForm] = useState({ card_id: '', platform: '', list_price: '', status: 'draft', external_url: '', notes: '' });
+  const [busyId, setBusyId] = useState(null);
+  const [msg, setMsg] = useState(null);
 
   function load() {
     api.listListings().then(setListings);
@@ -31,14 +33,44 @@ export default function Listings() {
     load();
   }
 
+  async function handlePushEbay(id) {
+    setBusyId(id);
+    setMsg(null);
+    try {
+      await api.pushEbayListing(id);
+      setMsg({ ok: true, text: 'Pushed to eBay.' });
+      load();
+    } catch (e) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleSyncEbay(id) {
+    setBusyId(id);
+    setMsg(null);
+    try {
+      await api.syncEbayListing(id);
+      setMsg({ ok: true, text: 'Synced status from eBay.' });
+      load();
+    } catch (e) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div>
       <h1>Marketplace Listings</h1>
       <p className="hint-text">
-        Draft and track listings across platforms (eBay, WhatNot, COMC, Facebook, etc). Direct API sync/OAuth per
-        marketplace isn't built in yet — each platform requires its own developer keys registered by you. Use
-        Reports → Export to generate a spreadsheet you can adapt for a platform's bulk-upload template.
+        Draft and track listings across platforms (eBay, WhatNot, COMC, Facebook, etc). eBay listings can be pushed
+        live and synced back via the eBay Sell API (Settings → API Keys) — implemented per eBay's docs but
+        <strong> unverified against a live seller account</strong>; test with one listing before relying on it.
+        Other platforms remain tracking-only — use Reports → Export for a spreadsheet you can adapt to a bulk-upload template.
       </p>
+      {msg && <p className={msg.ok ? 'hint-text' : 'error-text'}>{msg.text}</p>}
 
       <section className="panel">
         <h2>New Listing</h2>
@@ -85,7 +117,19 @@ export default function Listings() {
                 </select>
               </td>
               <td>{l.external_url ? <a href={l.external_url} target="_blank" rel="noreferrer">Open</a> : ''}</td>
-              <td><button className="btn small danger" onClick={() => handleDelete(l.id)}>Delete</button></td>
+              <td style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                {l.platform.toLowerCase() === 'ebay' && !l.ebay_offer_id && (
+                  <button className="btn small" disabled={busyId === l.id} onClick={() => handlePushEbay(l.id)}>
+                    {busyId === l.id ? '...' : 'Push to eBay'}
+                  </button>
+                )}
+                {l.ebay_offer_id && (
+                  <button className="btn small" disabled={busyId === l.id} onClick={() => handleSyncEbay(l.id)}>
+                    {busyId === l.id ? '...' : '↻ Sync'}
+                  </button>
+                )}
+                <button className="btn small danger" onClick={() => handleDelete(l.id)}>Delete</button>
+              </td>
             </tr>
           ))}
           {listings.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>No listings yet</td></tr>}

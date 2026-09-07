@@ -20,7 +20,7 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **Camera scanning & recognition**
 - Capture front/back photos using a USB webcam plugged into the machine you're browsing from, or your phone's camera by opening the same web app on your phone (same LAN as the server).
 - Barcode/QR scanner (on a card's detail page) to read a PSA/BGS/CGC cert barcode straight into the Cert Number field.
-- On-device OCR ("Extract Text") pulls raw text off a card photo so you can copy player name / set text / card number into the form. This is text extraction, not a card-identification database — there's no licensed card catalog wired in to auto-identify a card from a photo.
+- On-device OCR ("Extract Text") pulls raw text off a card photo, then each extracted line can be searched directly against the live Pokemon/Yu-Gi-Oh/Magic databases (🔍 buttons next to each line) — picking a real match autofills the form and pulls in the official image, the same as the manual 🔍 Look Up buttons. This is OCR + name-search, not true visual card recognition (no licensed card-image dataset or trained model is involved), but it gets you from "photo of an unknown card" to a filled-in record in two clicks for supported games.
 - Offline scan queueing: if a photo capture fails because you're offline (e.g. scanning on your phone with a flaky connection), it's queued in the browser and retried automatically once you're back online.
 
 **Sets & checklists**
@@ -54,15 +54,18 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **Purchase, sales & value tracking**
 - Cost basis, purchase source/date, sale price, fees, shipping, platform, buyer, automatic quantity/status updates, realized profit reporting.
 - Per-card value history, plus automated daily portfolio-value snapshots (configurable time-of-day, or trigger one manually) feeding the dashboard's value-over-time data.
-- Pluggable price-lookup architecture (Settings → Automatic Price Lookup):
-  - **TCGdex** (Pokemon), **YGOPRODeck** (Yu-Gi-Oh), and **Scryfall** (Magic) are real, working, free, keyless providers — "Refresh Value" on a card pulls a live price.
-  - **[PokéWallet](https://www.pokewallet.io/)** (Pokemon) is also wired up but needs a free API key you register yourself at pokewallet.io.
-  - eBay/TCGplayer-direct adapters are wired to real, documented APIs but require your own developer credentials — until you provide those they return a clear "not configured" message rather than fabricating a price.
+- Pluggable price-lookup architecture (Settings → Automatic Price Lookup), all real implementations (none are stubs):
+  - **TCGdex** (Pokemon), **YGOPRODeck** (Yu-Gi-Oh), **Scryfall** (Magic USD), **Cardhoarder** (Magic Online tickets, via Scryfall's aggregated data), and **Card Kingdom** (Magic retail, via their public bulk pricelist, cached 12h) — all free, keyless, work immediately.
+  - **[PokéWallet](https://www.pokewallet.io/)** (Pokemon) needs a free API key from pokewallet.io.
+  - **eBay** returns the median price of currently *active* listings via the Browse API (client-credentials app token) — an asking-price estimate, not sold comps (eBay's sold-comps API needs separate limited approval most developer accounts don't have). Needs a developer app Client ID/Secret.
+  - **TCGplayer (direct)** calls their Catalog + Pricing APIs — needs a TCGplayer partner-program app (Client ID/Secret from a separate approval process).
+  - Both eBay and TCGplayer are implemented against their published API contracts and make real network calls, but are **unverified against a live account** (no partner credentials available to test with) — expect to debug against your own real credentials.
   - "Manual" (default) means you enter values yourself.
 
 **Marketplace listings**
 - Track draft/active/sold listings per platform (eBay, WhatNot, COMC, Facebook, etc.) with price and link.
-- eBay OAuth connection scaffold in Settings, implemented per eBay's published developer docs — **untested against a live eBay app** (this project has no eBay developer credentials to test with). Register your own app at developer.ebay.com, paste in the Client ID/Secret/redirect URI, and verify before relying on it.
+- **Live eBay sync**: push a listing to eBay as a real fixed-price listing (Sell Inventory API: creates an inventory item, an offer, and publishes it) and sync its status back (checks for a sale via the Fulfillment API). Requires eBay OAuth connected plus your eBay account's business policy IDs and a shipping location key (Settings → API Keys → eBay Business Policies). Implemented per eBay's published docs; **untested against a live seller account** — publish one test listing and confirm it looks right on eBay before relying on it for real inventory.
+- Other platforms remain tracking-only (no public listing-creation API exists for most of them).
 
 **Export & import**
 - Excel (.xlsx), CSV, and PDF export of the full collection or a filtered subset, with selectable presets: full columns, an insurance-report column set (grading, location, value), or a tax/cost-basis column set.
@@ -79,7 +82,7 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **Appearance & installability**
 - Dark/light theme toggle (defaults to your OS preference, remembered per-browser).
 - Installable as a PWA (Add to Home Screen) with an offline-capable app shell.
-- Multi-language UI: English, Spanish, and French. Covers navigation and common action labels; page-internal form field labels are still English-only — the dictionary structure (`client/src/i18n.jsx`) is set up so more strings/languages can be added incrementally.
+- Multi-language UI: English, Spanish, and French. Covers navigation, common actions, the Dashboard, the Collection table, and the full card form (the most-reused piece of UI, shown on Add Card and every card's detail page). A few lower-traffic pages (Sales, Trades, Grading, Decks, Reports, Settings) still fall back to English text — the dictionary structure (`client/src/i18n.jsx`) is set up so remaining strings/languages can be added incrementally.
 
 **Admin: API Keys panel**
 - Settings → 🔑 API Keys (admin-only) consolidates every external service credential Card-Hub uses in one place: PokéWallet, eBay (Client ID/Secret/Redirect URI), and TCGplayer-direct — with a description, signup link, and (for eBay) the Connect button, right next to each key field. TCGdex, YGOPRODeck, and Scryfall need no key at all.

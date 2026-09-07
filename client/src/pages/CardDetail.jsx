@@ -5,12 +5,14 @@ import CameraCapture from '../components/CameraCapture.jsx';
 import BarcodeScanner from '../components/BarcodeScanner.jsx';
 import OcrAssist from '../components/OcrAssist.jsx';
 import CardLookup from '../components/CardLookup.jsx';
+import { useLanguage } from '../i18n.jsx';
 import { api } from '../api.js';
 import { queueUpload } from '../offlineQueue.js';
 
 export default function CardDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [card, setCard] = useState(null);
   const [similar, setSimilar] = useState([]);
   const [showCamera, setShowCamera] = useState(false);
@@ -115,11 +117,11 @@ export default function CardDetail() {
 
   const gameLabels = { pokemon: 'Pokemon', yugioh: 'Yu-Gi-Oh', magic: 'Magic: The Gathering' };
 
-  async function handleLookupPick(result) {
+  async function handleCardPick(result, gameKey) {
     setCard((c) => ({
       ...c,
       category: 'tcg',
-      sport_or_game: gameLabels[showLookup] || c.sport_or_game,
+      sport_or_game: gameLabels[gameKey] || c.sport_or_game,
       player_or_character: result.name,
       set_name: result.setName || c.set_name,
       card_number: result.number || c.card_number,
@@ -169,7 +171,7 @@ export default function CardDetail() {
             <button className="btn" onClick={() => setShowLookup(showLookup === 'magic' ? null : 'magic')}>🔍 Magic</button>
           </div>
         </div>
-        {showLookup && <CardLookup game={showLookup} onPick={handleLookupPick} />}
+        {showLookup && <CardLookup game={showLookup} onPick={(r) => handleCardPick(r, showLookup)} />}
         <div className="image-gallery">
           {card.images.map((img) => (
             <div className="image-thumb" key={img.id}>
@@ -182,7 +184,7 @@ export default function CardDetail() {
           ))}
           {card.images.length === 0 && <p>No images yet. Use the USB webcam on this machine, or open Card-Hub on your phone's browser to scan with your phone camera.</p>}
         </div>
-        {frontImage && <OcrAssist imageUrl={`/images/${frontImage.filename}`} />}
+        {frontImage && <OcrAssist imageUrl={`/images/${frontImage.filename}`} onPick={handleCardPick} />}
       </section>
 
       {showCamera && <CameraCapture onCapture={handleCapture} onClose={() => setShowCamera(false)} />}
@@ -223,7 +225,7 @@ export default function CardDetail() {
           </div>
         </div>
         {valueMsg && <p className={valueMsg.ok ? 'hint-text' : 'error-text'}>{valueMsg.text}</p>}
-        <CardForm key={formKey} initial={card} onSubmit={handleSave} submitLabel="Save Changes" />
+        <CardForm key={formKey} initial={card} onSubmit={handleSave} submitLabel={t('btn_save_changes')} />
       </section>
 
       {card.values.length > 0 && (

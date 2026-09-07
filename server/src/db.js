@@ -17,20 +17,28 @@ db.pragma('foreign_keys = ON');
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
-// CREATE TABLE IF NOT EXISTS won't add new columns to a `cards` table that already
-// existed before these fields were introduced - patch them in for upgrades.
-const NEW_CARD_COLUMNS = {
+// CREATE TABLE IF NOT EXISTS won't add new columns to a table that already existed
+// before these fields were introduced - patch them in for upgrades.
+function addColumnsIfMissing(table, columns) {
+  const existing = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
+  for (const [col, type] of Object.entries(columns)) {
+    if (!existing.has(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+  }
+}
+
+addColumnsIfMissing('cards', {
   raw_value: 'REAL',
   graded_value_estimate: 'REAL',
   last_sold_value: 'REAL',
   is_consigned: 'INTEGER NOT NULL DEFAULT 0',
   consignor_name: 'TEXT',
   consignment_payout_pct: 'REAL',
-};
-const existingCardCols = new Set(db.prepare('PRAGMA table_info(cards)').all().map((c) => c.name));
-for (const [col, type] of Object.entries(NEW_CARD_COLUMNS)) {
-  if (!existingCardCols.has(col)) db.exec(`ALTER TABLE cards ADD COLUMN ${col} ${type}`);
-}
+});
+
+addColumnsIfMissing('listings', {
+  ebay_offer_id: 'TEXT',
+  ebay_sku: 'TEXT',
+});
 
 // Seed a default admin account on first run so the app is usable out of the box.
 const userCount = db.prepare('SELECT COUNT(*) as n FROM users').get().n;

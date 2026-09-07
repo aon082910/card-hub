@@ -153,7 +153,7 @@ export default function Settings() {
           <div className="api-key-row">
             <div className="api-key-info">
               <strong>eBay Developer App</strong>
-              <p className="hint-text">Marketplace OAuth connection + (future) price lookup. Register a developer app at <a href="https://developer.ebay.com/" target="_blank" rel="noreferrer">developer.ebay.com</a> to get these three values. OAuth flow is implemented per eBay's docs but untested against a live app — verify before relying on it.</p>
+              <p className="hint-text">Marketplace OAuth connection + active-listing price lookup. Register a developer app at <a href="https://developer.ebay.com/" target="_blank" rel="noreferrer">developer.ebay.com</a> to get these three values. Implemented per eBay's docs but untested against a live app — verify before relying on it.</p>
             </div>
             <div className="api-key-fields">
               <input value={settings.ebay_client_id || ''} onChange={(e) => set('ebay_client_id', e.target.value)} placeholder="Client ID" />
@@ -168,10 +168,27 @@ export default function Settings() {
 
           <div className="api-key-row">
             <div className="api-key-info">
-              <strong>TCGplayer (direct)</strong>
-              <p className="hint-text">Alternative direct pricing source. Register at <a href="https://docs.tcgplayer.com/" target="_blank" rel="noreferrer">docs.tcgplayer.com</a>. Live lookup isn't implemented yet even once a key is set — see server/src/lib/priceProviders.js.</p>
+              <strong>eBay Business Policies (for pushing live listings)</strong>
+              <p className="hint-text">Required only to push a listing live from the Listings page. Find these IDs in your eBay account under Account → Business Policies, and your shipping location under Account → Shipping → Locations. A default category ID is also required — trading-card categories vary a lot by game/sport, so pick one from your own eBay account's listing flow or the Taxonomy API.</p>
             </div>
-            <input value={settings.price_provider_api_key || ''} onChange={(e) => set('price_provider_api_key', e.target.value)} placeholder="paste key here" />
+            <div className="api-key-fields">
+              <input value={settings.ebay_payment_policy_id || ''} onChange={(e) => set('ebay_payment_policy_id', e.target.value)} placeholder="Payment Policy ID" />
+              <input value={settings.ebay_return_policy_id || ''} onChange={(e) => set('ebay_return_policy_id', e.target.value)} placeholder="Return Policy ID" />
+              <input value={settings.ebay_fulfillment_policy_id || ''} onChange={(e) => set('ebay_fulfillment_policy_id', e.target.value)} placeholder="Fulfillment Policy ID" />
+              <input value={settings.ebay_merchant_location_key || ''} onChange={(e) => set('ebay_merchant_location_key', e.target.value)} placeholder="Merchant Location Key" />
+              <input value={settings.ebay_default_category_id || ''} onChange={(e) => set('ebay_default_category_id', e.target.value)} placeholder="Default Category ID" />
+            </div>
+          </div>
+
+          <div className="api-key-row">
+            <div className="api-key-info">
+              <strong>TCGplayer (direct)</strong>
+              <p className="hint-text">Alternative direct pricing source for TCG cards. Requires partner-program approval at <a href="https://docs.tcgplayer.com/" target="_blank" rel="noreferrer">docs.tcgplayer.com</a>. Implemented per their published API but unverified against a live account.</p>
+            </div>
+            <div className="api-key-fields">
+              <input value={settings.tcgplayer_client_id || ''} onChange={(e) => set('tcgplayer_client_id', e.target.value)} placeholder="Client ID" />
+              <input value={settings.tcgplayer_client_secret || ''} onChange={(e) => set('tcgplayer_client_secret', e.target.value)} placeholder="Client Secret" />
+            </div>
           </div>
 
           <div className="cta-row">
@@ -202,9 +219,12 @@ export default function Settings() {
         <h2>Automatic Price Lookup</h2>
         <p className="hint-text">
           "Manual" means you enter values yourself. <strong>TCGdex</strong> (Pokemon), <strong>YGOPRODeck</strong>
-          (Yu-Gi-Oh), and <strong>Scryfall</strong> (Magic: The Gathering) are free, keyless, and work immediately.
-          All match against the card's Player/Character or Set Name field (or use the 🔍 Look Up buttons on a card
-          to fill it precisely). PokéWallet/eBay/TCGplayer need API keys — see the API Keys panel above.
+          (Yu-Gi-Oh), <strong>Scryfall</strong> (Magic USD), <strong>Cardhoarder</strong> (Magic Online tickets), and
+          <strong> Card Kingdom</strong> (Magic retail) are free, keyless, and work immediately. All match against
+          the card's Player/Character or Set Name field (or use the 🔍 Look Up buttons to fill it precisely).
+          PokéWallet/eBay/TCGplayer need API keys — see the API Keys panel above. <strong>eBay</strong> returns the
+          median price of currently active listings (an asking-price estimate) — true sold comps require eBay's
+          Marketplace Insights API, which needs separate limited approval most developer accounts don't have.
         </p>
         <div className="form-grid">
           <label>Provider
@@ -212,10 +232,12 @@ export default function Settings() {
               <option value="manual">Manual</option>
               <option value="tcgdex">TCGdex — Pokemon (free, no key)</option>
               <option value="ygoprodeck">YGOPRODeck — Yu-Gi-Oh (free, no key)</option>
-              <option value="scryfall">Scryfall — Magic: The Gathering (free, no key)</option>
+              <option value="scryfall">Scryfall — Magic USD (free, no key)</option>
+              <option value="cardhoarder">Cardhoarder — Magic Online tix (free, no key)</option>
+              <option value="cardkingdom">Card Kingdom — Magic retail (free, no key)</option>
               <option value="pokewallet">PokéWallet — Pokemon (needs API key)</option>
-              <option value="ebay">eBay (experimental, needs API key)</option>
-              <option value="tcgplayer">TCGplayer direct (experimental, needs API key)</option>
+              <option value="ebay">eBay active listings (needs API key)</option>
+              <option value="tcgplayer">TCGplayer direct (needs API key)</option>
             </select>
           </label>
         </div>

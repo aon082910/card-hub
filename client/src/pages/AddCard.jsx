@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CardForm from '../components/CardForm.jsx';
 import CardLookup from '../components/CardLookup.jsx';
+import { useLanguage } from '../i18n.jsx';
 import { api } from '../api.js';
 
 const GAME_LABELS = { pokemon: 'Pokemon', yugioh: 'Yu-Gi-Oh', magic: 'Magic: The Gathering' };
 
 export default function AddCard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [prefill, setPrefill] = useState(null);
   const [formKey, setFormKey] = useState(0);
   const [pendingImage, setPendingImage] = useState(null);
@@ -52,7 +54,7 @@ export default function AddCard() {
         {pendingImage && <p className="hint-text">Image selected — it will attach once you create the card.</p>}
       </section>
 
-      <CardForm key={formKey} initial={prefill} onSubmit={handleSubmit} submitLabel="Create Card" />
+      <CardForm key={formKey} initial={prefill} onSubmit={handleSubmit} submitLabel={t('btn_create_card')} />
     </div>
   );
 }

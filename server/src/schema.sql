@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS listings (
   external_id TEXT,
   listed_at TEXT,
   notes TEXT,
+  ebay_offer_id TEXT,                            -- set when pushed live via the eBay Sell Inventory API
+  ebay_sku TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
