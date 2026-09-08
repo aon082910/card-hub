@@ -64,6 +64,7 @@ export default function Scan() {
 
   const [pairs, setPairs] = useState([]);
   const [creatingId, setCreatingId] = useState(null);
+  const [preview, setPreview] = useState(null); // { url, label } | null
 
   useEffect(() => { sideRef.current = side; }, [side]);
   useEffect(() => { autoAlternateRef.current = autoAlternate; }, [autoAlternate]);
@@ -266,7 +267,10 @@ export default function Scan() {
   function removeShot(pairId, shotSide) {
     setPairs((prev) => prev.map((p) => {
       if (p.id !== pairId) return p;
-      if (p[shotSide]) URL.revokeObjectURL(p[shotSide].url);
+      if (p[shotSide]) {
+        URL.revokeObjectURL(p[shotSide].url);
+        setPreview((cur) => (cur && cur.url === p[shotSide].url ? null : cur));
+      }
       return { ...p, [shotSide]: null };
     }).filter((p) => p.front || p.back));
   }
@@ -274,8 +278,14 @@ export default function Scan() {
   function deletePair(pairId) {
     setPairs((prev) => prev.filter((p) => {
       if (p.id !== pairId) return true;
-      if (p.front) URL.revokeObjectURL(p.front.url);
-      if (p.back) URL.revokeObjectURL(p.back.url);
+      if (p.front) {
+        URL.revokeObjectURL(p.front.url);
+        setPreview((cur) => (cur && cur.url === p.front.url ? null : cur));
+      }
+      if (p.back) {
+        URL.revokeObjectURL(p.back.url);
+        setPreview((cur) => (cur && cur.url === p.back.url ? null : cur));
+      }
       return false;
     }));
   }
@@ -405,12 +415,16 @@ export default function Scan() {
               <div className="scan-pair-card" key={p.id}>
                 <div className="scan-pair-thumbs">
                   <div className="scan-thumb-slot">
-                    {p.front ? <img src={p.front.url} alt="front" /> : <div className="scan-thumb-missing">{t('scan_pair_incomplete')}</div>}
+                    {p.front
+                      ? <img src={p.front.url} alt="front" className="scan-thumb-clickable" onClick={() => setPreview({ url: p.front.url, label: t('scan_side_front') })} />
+                      : <div className="scan-thumb-missing">{t('scan_pair_incomplete')}</div>}
                     <span className="scan-thumb-label">{t('scan_side_front')}</span>
                     {p.front && <button className="btn small" onClick={() => removeShot(p.id, 'front')}>{t('scan_delete')}</button>}
                   </div>
                   <div className="scan-thumb-slot">
-                    {p.back ? <img src={p.back.url} alt="back" /> : <div className="scan-thumb-missing">{t('scan_pair_incomplete')}</div>}
+                    {p.back
+                      ? <img src={p.back.url} alt="back" className="scan-thumb-clickable" onClick={() => setPreview({ url: p.back.url, label: t('scan_side_back') })} />
+                      : <div className="scan-thumb-missing">{t('scan_pair_incomplete')}</div>}
                     <span className="scan-thumb-label">{t('scan_side_back')}</span>
                     {p.back && <button className="btn small" onClick={() => removeShot(p.id, 'back')}>{t('scan_delete')}</button>}
                   </div>
@@ -426,6 +440,18 @@ export default function Scan() {
           </div>
         )}
       </section>
+
+      {preview && (
+        <div className="camera-modal" onClick={() => setPreview(null)}>
+          <div className="camera-panel scan-preview-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>{preview.label}</h3>
+            <img src={preview.url} alt={preview.label} className="scan-preview-img" />
+            <div className="camera-controls">
+              <button className="btn primary" onClick={() => setPreview(null)}>{t('btn_close')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
