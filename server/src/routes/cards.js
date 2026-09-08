@@ -30,7 +30,7 @@ const CARD_FIELDS = [
   'serial_number', 'print_run', 'quantity', 'storage_location', 'tags', 'notes',
   'cost_basis', 'purchase_date', 'purchase_source', 'current_value', 'status',
   'raw_value', 'graded_value_estimate', 'last_sold_value',
-  'is_consigned', 'consignor_name', 'consignment_payout_pct',
+  'is_consigned', 'consignor_name', 'consignment_payout_pct', 'for_trade',
 ];
 
 function pickCardFields(body) {

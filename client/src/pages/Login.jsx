@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth.jsx';
+import { useLanguage } from '../i18n.jsx';
 
 export default function Login() {
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -15,7 +17,7 @@ export default function Login() {
     try {
       await login(username, password);
     } catch (err) {
-      setError('Invalid username or password.');
+      setError(t('login_error'));
     } finally {
       setBusy(false);
     }
@@ -24,17 +26,17 @@ export default function Login() {
   return (
     <div className="login-shell">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>Card-Hub</h1>
-        <p className="hint-text">Sign in to your collection.</p>
+        <h1>{t('login_title')}</h1>
+        <p className="hint-text">{t('login_subtitle')}</p>
         {error && <p className="error-text">{error}</p>}
-        <label>Username
+        <label>{t('login_username')}
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
         </label>
-        <label>Password
+        <label>{t('login_password')}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
-        <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Sign In'}</button>
-        <p className="hint-text">First time? Default login is <strong>admin</strong> / <strong>admin</strong> — change it from Settings after signing in.</p>
+        <button className="btn primary" type="submit" disabled={busy}>{busy ? t('login_signing_in') : t('login_sign_in')}</button>
+        <p className="hint-text">{t('login_first_time')} <strong>admin</strong> / <strong>admin</strong> {t('login_change_after')}</p>
       </form>
     </div>
   );

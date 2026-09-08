@@ -41,6 +41,15 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **Consignment tracking**
 - Flag a card as consigned (not fully owned) with the consignor's name and your payout percentage, so it's clearly distinguished from cards you own outright.
 
+**For Trade list**
+- Flag any card "For Trade" (distinct from just owning a duplicate) and it shows up on a dedicated **For Trade** page, with its own shareable public link — mirrors TCDB's have-list/trade-list split.
+
+**Deck value & composition**
+- A Deck's page shows a summary: total card count, total value, and a breakdown by category — computed from the cards already in the deck, no extra setup.
+
+**eBay deal watches**
+- Save a search query + target price (Watches page); "Check Now" lists current active eBay listings under that price. Reuses the same eBay Browse API integration as the eBay price provider — needs your eBay API key, and again, active listings only (not sold comps). Approximates Slabfy's eBay-monitoring-for-deals feature.
+
 **Trades**
 - A simple ledger for cards traded with other collectors (no money involved) — separate from Sales, which assumes a cash transaction. Trading a card away reduces its quantity, same as a sale.
 
@@ -82,7 +91,7 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **Appearance & installability**
 - Dark/light theme toggle (defaults to your OS preference, remembered per-browser).
 - Installable as a PWA (Add to Home Screen) with an offline-capable app shell.
-- Multi-language UI: English, Spanish, and French. Covers navigation, common actions, the Dashboard, the Collection table, and the full card form (the most-reused piece of UI, shown on Add Card and every card's detail page). A few lower-traffic pages (Sales, Trades, Grading, Decks, Reports, Settings) still fall back to English text — the dictionary structure (`client/src/i18n.jsx`) is set up so remaining strings/languages can be added incrementally.
+- Multi-language UI: English, Spanish, and French — covers navigation, common actions, the Dashboard, the Collection table, the full card form, and every page listed in this README (titles, table headers, form labels, buttons). The long technical explanation paragraphs in Settings/Reports (API/OAuth setup instructions) stay in English by design — those terms don't really benefit from translation. The dictionary structure (`client/src/i18n.jsx`) is set up so more strings/languages can be added incrementally.
 
 **Admin: API Keys panel**
 - Settings → 🔑 API Keys (admin-only) consolidates every external service credential Card-Hub uses in one place: PokéWallet, eBay (Client ID/Secret/Redirect URI), and TCGplayer-direct — with a description, signup link, and (for eBay) the Connect button, right next to each key field. TCGdex, YGOPRODeck, and Scryfall need no key at all.

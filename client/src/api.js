@@ -95,6 +95,11 @@ export const api = {
   createShareLink: (data) => request('/share', { method: 'POST', body: JSON.stringify(data) }),
   deleteShareLink: (id) => request(`/share/${id}`, { method: 'DELETE' }),
 
+  listWatches: () => request('/watches'),
+  createWatch: (data) => request('/watches', { method: 'POST', body: JSON.stringify(data) }),
+  deleteWatch: (id) => request(`/watches/${id}`, { method: 'DELETE' }),
+  checkWatch: (id) => request(`/watches/${id}/check`, { method: 'POST' }),
+
   previewImport: (file) => {
     const form = new FormData();
     form.append('file', file);

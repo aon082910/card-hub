@@ -9,7 +9,7 @@ const empty = {
   tags: '', notes: '', cost_basis: '', purchase_date: '', purchase_source: '',
   current_value: '', status: 'owned',
   raw_value: '', graded_value_estimate: '', last_sold_value: '',
-  is_consigned: 0, consignor_name: '', consignment_payout_pct: '',
+  is_consigned: 0, consignor_name: '', consignment_payout_pct: '', for_trade: 0,
 };
 
 export default function CardForm({ initial, onSubmit, submitLabel }) {
@@ -130,6 +130,10 @@ export default function CardForm({ initial, onSubmit, submitLabel }) {
             </label>
           </>
         )}
+        <label className="checkbox-label">
+          <input type="checkbox" checked={!!form.for_trade} onChange={(e) => set('for_trade', e.target.checked ? 1 : 0)} />
+          {t('field_for_trade')}
+        </label>
         <label>{t('field_status')}
           <select value={form.status} onChange={(e) => set('status', e.target.value)}>
             <option value="owned">{t('status_owned')}</option>

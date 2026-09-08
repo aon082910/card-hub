@@ -174,8 +174,9 @@ export default function Collection() {
                 <td>{c.cost_basis != null ? `$${Number(c.cost_basis).toFixed(2)}` : ''}</td>
                 <td>{c.current_value != null ? `$${Number(c.current_value).toFixed(2)}` : ''}</td>
                 <td>
-                  <span className={`badge status-${c.status}`}>{c.status}</span>
+                  <span className={`badge status-${c.status}`}>{t(`status_${c.status}`)}</span>
                   {!!c.is_consigned && <span className="badge" style={{ marginLeft: 4 }}>consigned</span>}
+                  {!!c.for_trade && <span className="badge" style={{ marginLeft: 4 }}>trade</span>}
                 </td>
               </tr>
             ))}

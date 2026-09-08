@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 export default function Listings() {
+  const { t } = useLanguage();
   const [listings, setListings] = useState([]);
   const [cards, setCards] = useState([]);
   const [form, setForm] = useState({ card_id: '', platform: '', list_price: '', status: 'draft', external_url: '', notes: '' });
@@ -28,7 +30,7 @@ export default function Listings() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this listing?')) return;
+    if (!confirm(t('listings_confirm_delete'))) return;
     await api.deleteListing(id);
     load();
   }
@@ -63,7 +65,7 @@ export default function Listings() {
 
   return (
     <div>
-      <h1>Marketplace Listings</h1>
+      <h1>{t('listings_title')}</h1>
       <p className="hint-text">
         Draft and track listings across platforms (eBay, WhatNot, COMC, Facebook, etc). eBay listings can be pushed
         live and synced back via the eBay Sell API (Settings → API Keys) — implemented per eBay's docs but
@@ -73,34 +75,34 @@ export default function Listings() {
       {msg && <p className={msg.ok ? 'hint-text' : 'error-text'}>{msg.text}</p>}
 
       <section className="panel">
-        <h2>New Listing</h2>
+        <h2>{t('listings_new')}</h2>
         <form className="card-form" onSubmit={handleSubmit}>
           <div className="form-grid">
-            <label>Card
+            <label>{t('col_card')}
               <select value={form.card_id} onChange={(e) => setForm({ ...form, card_id: e.target.value })} required>
-                <option value="">Select a card...</option>
+                <option value="">{t('select_a_card')}</option>
                 {cards.map((c) => (
                   <option key={c.id} value={c.id}>{c.player_or_character || c.set_name} ({c.year})</option>
                 ))}
               </select>
             </label>
-            <label>Platform
+            <label>{t('col_platform')}
               <input value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} placeholder="eBay, WhatNot..." required />
             </label>
-            <label>List Price ($)
+            <label>{t('listings_list_price')}
               <input type="number" step="0.01" value={form.list_price} onChange={(e) => setForm({ ...form, list_price: e.target.value })} />
             </label>
-            <label>External URL
+            <label>{t('listings_external_url')}
               <input value={form.external_url} onChange={(e) => setForm({ ...form, external_url: e.target.value })} placeholder="Link to live listing" />
             </label>
           </div>
-          <button className="btn primary" type="submit">Add Listing</button>
+          <button className="btn primary" type="submit">{t('listings_add')}</button>
         </form>
       </section>
 
       <table className="data-table">
         <thead>
-          <tr><th>Card</th><th>Platform</th><th>Price</th><th>Status</th><th>Link</th><th></th></tr>
+          <tr><th>{t('col_card')}</th><th>{t('col_platform')}</th><th>{t('col_price')}</th><th>{t('field_status')}</th><th>{t('col_link')}</th><th></th></tr>
         </thead>
         <tbody>
           {listings.map((l) => (
@@ -110,13 +112,13 @@ export default function Listings() {
               <td>{l.list_price != null ? `$${Number(l.list_price).toFixed(2)}` : ''}</td>
               <td>
                 <select value={l.status} onChange={(e) => updateStatus(l.id, e.target.value)}>
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="ended">Ended</option>
-                  <option value="sold">Sold</option>
+                  <option value="draft">{t('listings_status_draft')}</option>
+                  <option value="active">{t('listings_status_active')}</option>
+                  <option value="ended">{t('listings_status_ended')}</option>
+                  <option value="sold">{t('listings_status_sold')}</option>
                 </select>
               </td>
-              <td>{l.external_url ? <a href={l.external_url} target="_blank" rel="noreferrer">Open</a> : ''}</td>
+              <td>{l.external_url ? <a href={l.external_url} target="_blank" rel="noreferrer">{t('listings_open')}</a> : ''}</td>
               <td style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                 {l.platform.toLowerCase() === 'ebay' && !l.ebay_offer_id && (
                   <button className="btn small" disabled={busyId === l.id} onClick={() => handlePushEbay(l.id)}>
@@ -128,11 +130,11 @@ export default function Listings() {
                     {busyId === l.id ? '...' : '↻ Sync'}
                   </button>
                 )}
-                <button className="btn small danger" onClick={() => handleDelete(l.id)}>Delete</button>
+                <button className="btn small danger" onClick={() => handleDelete(l.id)}>{t('btn_delete')}</button>
               </td>
             </tr>
           ))}
-          {listings.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>No listings yet</td></tr>}
+          {listings.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>{t('listings_none')}</td></tr>}
         </tbody>
       </table>
     </div>

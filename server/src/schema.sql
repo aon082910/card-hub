@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS cards (
   is_consigned INTEGER NOT NULL DEFAULT 0,
   consignor_name TEXT,
   consignment_payout_pct REAL,                 -- % of sale price owed to the consignor
+  for_trade INTEGER NOT NULL DEFAULT 0,        -- available to trade away (distinct from just owning it)
   status TEXT NOT NULL DEFAULT 'owned',         -- owned | listed | sold | archived
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -180,11 +181,21 @@ CREATE TABLE IF NOT EXISTS share_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   token TEXT NOT NULL UNIQUE,
   label TEXT,
-  kind TEXT NOT NULL DEFAULT 'selection',          -- selection | wanted
+  kind TEXT NOT NULL DEFAULT 'selection',          -- selection | wanted | for_trade
   card_ids TEXT,                                   -- JSON array, used when kind = 'selection'
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   expires_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ebay_watches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  query TEXT NOT NULL,
+  target_price REAL,
+  notes TEXT,
+  last_checked_at TEXT,
+  last_result_count INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_cards_category ON cards(category);

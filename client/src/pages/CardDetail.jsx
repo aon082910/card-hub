@@ -136,7 +136,7 @@ export default function CardDetail() {
     }
   }
 
-  if (!card) return <p>Loading...</p>;
+  if (!card) return <p>{t('loading')}</p>;
 
   const frontImage = card.images.find((i) => i.side === 'front');
 
@@ -153,12 +153,12 @@ export default function CardDetail() {
 
       <section className="panel">
         <div className="panel-header-row">
-          <h2>Images</h2>
+          <h2>{t('images_title')}</h2>
           <div className="image-actions">
             <select value={captureSide} onChange={(e) => setCaptureSide(e.target.value)}>
-              <option value="front">Front</option>
-              <option value="back">Back</option>
-              <option value="other">Other</option>
+              <option value="front">{t('side_front')}</option>
+              <option value="back">{t('side_back')}</option>
+              <option value="other">{t('side_other')}</option>
             </select>
             <button className="btn primary" onClick={() => setShowCamera(true)}>📷 Scan with Camera</button>
             <button className="btn" onClick={() => setShowScanner(true)}>▦ Scan Cert Barcode</button>
@@ -182,7 +182,7 @@ export default function CardDetail() {
               </div>
             </div>
           ))}
-          {card.images.length === 0 && <p>No images yet. Use the USB webcam on this machine, or open Card-Hub on your phone's browser to scan with your phone camera.</p>}
+          {card.images.length === 0 && <p>{t('no_images_hint')}</p>}
         </div>
         {frontImage && <OcrAssist imageUrl={`/images/${frontImage.filename}`} onPick={handleCardPick} />}
       </section>
@@ -191,14 +191,14 @@ export default function CardDetail() {
       {showScanner && <BarcodeScanner onDetect={handleBarcodeDetected} onClose={() => setShowScanner(false)} />}
 
       <section className="panel">
-        <h2>Quick Actions</h2>
+        <h2>{t('quick_actions_title')}</h2>
         <div className="cta-row">
           <Link className="btn" to="/grading">📮 Submit for Grading</Link>
           <select value={addToDeckId} onChange={(e) => setAddToDeckId(e.target.value)} style={{ width: 'auto' }}>
-            <option value="">Add to deck...</option>
+            <option value="">{t('add_to_deck_ph')}</option>
             {decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <button className="btn" onClick={handleAddToDeck} disabled={!addToDeckId}>Add</button>
+          <button className="btn" onClick={handleAddToDeck} disabled={!addToDeckId}>{t('btn_add')}</button>
           <button className="btn" onClick={handleShareCard}>🔗 Share This Card</button>
         </div>
         {shareUrl && <p className="hint-text">Public link: <a href={shareUrl} target="_blank" rel="noreferrer">{shareUrl}</a></p>}
@@ -206,7 +206,7 @@ export default function CardDetail() {
           <div style={{ marginTop: '1rem' }}>
             <p className="hint-text">Grading submissions for this card:</p>
             <table className="simple-table">
-              <thead><tr><th>Company</th><th>Status</th><th>Grade</th><th>Submitted</th></tr></thead>
+              <thead><tr><th>{t('col_company')}</th><th>{t('field_status')}</th><th>{t('field_grade')}</th><th>{t('col_submitted')}</th></tr></thead>
               <tbody>
                 {gradingHistory.map((g) => (
                   <tr key={g.id}><td>{g.company}</td><td>{g.status}</td><td>{g.resulting_grade}</td><td>{g.submitted_at}</td></tr>
@@ -219,7 +219,7 @@ export default function CardDetail() {
 
       <section className="panel">
         <div className="panel-header-row">
-          <h2>Details</h2>
+          <h2>{t('details_title')}</h2>
           <div className="cta-row">
             <button className="btn" onClick={handleRefreshValue} disabled={refreshing}>{refreshing ? 'Checking...' : '↻ Refresh Value'}</button>
           </div>
@@ -230,9 +230,9 @@ export default function CardDetail() {
 
       {card.values.length > 0 && (
         <section className="panel">
-          <h2>Value History</h2>
+          <h2>{t('value_history_title')}</h2>
           <table className="simple-table">
-            <thead><tr><th>Date</th><th>Value</th><th>Source</th></tr></thead>
+            <thead><tr><th>{t('col_date')}</th><th>{t('collection_col_value')}</th><th>{t('col_source')}</th></tr></thead>
             <tbody>
               {card.values.map((v) => (
                 <tr key={v.id}><td>{v.recorded_at}</td><td>${Number(v.value).toFixed(2)}</td><td>{v.source}</td></tr>
@@ -244,9 +244,9 @@ export default function CardDetail() {
 
       {card.sales.length > 0 && (
         <section className="panel">
-          <h2>Sales</h2>
+          <h2>{t('sales_title')}</h2>
           <table className="simple-table">
-            <thead><tr><th>Date</th><th>Price</th><th>Platform</th></tr></thead>
+            <thead><tr><th>{t('col_date')}</th><th>{t('col_price')}</th><th>{t('col_platform')}</th></tr></thead>
             <tbody>
               {card.sales.map((s) => (
                 <tr key={s.id}><td>{s.sale_date}</td><td>${Number(s.sale_price).toFixed(2)}</td><td>{s.platform}</td></tr>
@@ -258,7 +258,7 @@ export default function CardDetail() {
 
       {similar.length > 0 && (
         <section className="panel">
-          <h2>Similar Cards</h2>
+          <h2>{t('similar_cards_title')}</h2>
           <ul className="similar-list">
             {similar.map((s) => (
               <li key={s.id}>

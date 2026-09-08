@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 const empty = { name: '', category: 'sports', sport_or_game: '', year: '', manufacturer: '', total_cards: '', notes: '' };
 
 export default function Sets() {
+  const { t } = useLanguage();
   const [sets, setSets] = useState([]);
   const [form, setForm] = useState(empty);
   const [expanded, setExpanded] = useState(null);
@@ -38,7 +40,7 @@ export default function Sets() {
 
   return (
     <div>
-      <h1>Sets & Checklists</h1>
+      <h1>{t('sets_title')}</h1>
       <p className="hint-text">
         Define a set (matched by Set Name + Year + Manufacturer on your cards) and track how much of it you own.
         Completion is based on distinct card numbers owned in your collection, not sold.

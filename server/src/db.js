@@ -33,6 +33,7 @@ addColumnsIfMissing('cards', {
   is_consigned: 'INTEGER NOT NULL DEFAULT 0',
   consignor_name: 'TEXT',
   consignment_payout_pct: 'REAL',
+  for_trade: 'INTEGER NOT NULL DEFAULT 0',
 });
 
 addColumnsIfMissing('listings', {

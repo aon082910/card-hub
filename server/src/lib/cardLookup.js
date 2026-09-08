@@ -180,7 +180,7 @@ async function ebaySearchActiveListings(query, clientId, clientSecret) {
   return {
     medianPrice,
     sampleSize: prices.length,
-    items: items.slice(0, 5).map((i) => ({ title: i.title, price: i.price ? parseFloat(i.price.value) : null, url: i.itemWebUrl })),
+    items: items.map((i) => ({ title: i.title, price: i.price ? parseFloat(i.price.value) : null, url: i.itemWebUrl })),
   };
 }
 

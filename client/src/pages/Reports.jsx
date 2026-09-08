@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 const FIELD_LABELS = {
   category: 'Category', sport_or_game: 'Sport/Game', player_or_character: 'Player/Character',
@@ -12,6 +13,7 @@ const FIELD_LABELS = {
 };
 
 export default function Reports() {
+  const { t } = useLanguage();
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [preset, setPreset] = useState('full');
@@ -98,7 +100,7 @@ export default function Reports() {
 
   return (
     <div>
-      <h1>Reports & Export</h1>
+      <h1>{t('reports_title')}</h1>
 
       <section className="panel">
         <h2>Export Collection</h2>

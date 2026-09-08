@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth.jsx';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 export default function Settings() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [settings, setSettings] = useState(null);
   const [saveMsg, setSaveMsg] = useState(null);
   const [users, setUsers] = useState([]);
@@ -77,11 +79,11 @@ export default function Settings() {
     setAuditLog(await api.auditLog());
   }
 
-  if (!settings) return <p>Loading...</p>;
+  if (!settings) return <p>{t('loading')}</p>;
 
   return (
     <div>
-      <h1>Settings</h1>
+      <h1>{t('settings_title')}</h1>
 
       <section className="panel">
         <h2>Your Account</h2>

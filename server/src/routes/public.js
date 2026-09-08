@@ -17,6 +17,8 @@ router.get('/share/:token', (req, res) => {
   let cards;
   if (link.kind === 'wanted') {
     cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE status = 'wanted' ORDER BY player_or_character`).all();
+  } else if (link.kind === 'for_trade') {
+    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE for_trade = 1 AND status != 'sold' ORDER BY player_or_character`).all();
   } else {
     const ids = JSON.parse(link.card_ids || '[]');
     if (!ids.length) cards = [];

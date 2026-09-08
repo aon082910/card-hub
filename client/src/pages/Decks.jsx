@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useLanguage } from '../i18n.jsx';
 
 export default function Decks() {
+  const { t } = useLanguage();
   const [decks, setDecks] = useState([]);
   const [form, setForm] = useState({ name: '', category: 'tcg', sport_or_game: '', notes: '' });
 
@@ -20,35 +22,35 @@ export default function Decks() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this deck? (cards themselves are not affected)')) return;
+    if (!confirm(t('decks_confirm_delete'))) return;
     await api.deleteDeck(id);
     load();
   }
 
   return (
     <div>
-      <h1>Decks & Binders</h1>
-      <p className="hint-text">Group cards from your collection into a named list — a deck you play, or a binder page you're curating.</p>
+      <h1>{t('decks_title')}</h1>
+      <p className="hint-text">{t('decks_hint')}</p>
 
       <section className="panel">
-        <h2>New Deck</h2>
+        <h2>{t('decks_new')}</h2>
         <form className="card-form" onSubmit={handleSubmit}>
           <div className="form-grid">
-            <label>Name
+            <label>{t('decks_name')}
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </label>
-            <label>Category
+            <label>{t('field_category')}
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                <option value="tcg">TCG</option>
-                <option value="sports">Sports</option>
-                <option value="other">Other</option>
+                <option value="tcg">{t('category_tcg')}</option>
+                <option value="sports">{t('category_sports')}</option>
+                <option value="other">{t('category_other')}</option>
               </select>
             </label>
-            <label>Sport / Game
+            <label>{t('field_sport_or_game')}
               <input value={form.sport_or_game} onChange={(e) => setForm({ ...form, sport_or_game: e.target.value })} placeholder="Magic, Pokemon..." />
             </label>
           </div>
-          <button className="btn primary" type="submit">Create Deck</button>
+          <button className="btn primary" type="submit">{t('decks_create')}</button>
         </form>
       </section>
 
@@ -57,13 +59,13 @@ export default function Decks() {
           <div className="panel set-card" key={d.id}>
             <div className="panel-header-row">
               <h2><Link to={`/decks/${d.id}`}>{d.name}</Link></h2>
-              <button className="btn small danger" onClick={() => handleDelete(d.id)}>Delete</button>
+              <button className="btn small danger" onClick={() => handleDelete(d.id)}>{t('btn_delete')}</button>
             </div>
             <p className="hint-text">{d.category} {d.sport_or_game ? `· ${d.sport_or_game}` : ''}</p>
-            <p>{d.card_count} card(s)</p>
+            <p>{d.card_count} {t('decks_card_count')}</p>
           </div>
         ))}
-        {decks.length === 0 && <p>No decks yet.</p>}
+        {decks.length === 0 && <p>{t('decks_none')}</p>}
       </div>
     </div>
   );
