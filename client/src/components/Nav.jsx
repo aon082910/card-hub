@@ -27,6 +27,7 @@ export default function Nav() {
       <nav className="nav-links">
         <NavLink to="/" end>{t('nav_dashboard')}</NavLink>
         <NavLink to="/collection">{t('nav_collection')}</NavLink>
+        <NavLink to="/scan">{t('nav_scan')}</NavLink>
         <NavLink to="/want-list">{t('nav_want_list')}</NavLink>
         <NavLink to="/for-trade">{t('nav_for_trade')}</NavLink>
         <NavLink to="/decks">{t('nav_decks')}</NavLink>

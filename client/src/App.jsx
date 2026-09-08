@@ -20,6 +20,7 @@ import Trades from './pages/Trades.jsx';
 import WantList from './pages/WantList.jsx';
 import ForTrade from './pages/ForTrade.jsx';
 import Watches from './pages/Watches.jsx';
+import Scan from './pages/Scan.jsx';
 
 export default function App() {
   const { user } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/collection" element={<Collection />} />
           <Route path="/collection/new" element={<AddCard />} />
           <Route path="/collection/:id" element={<CardDetail />} />
+          <Route path="/scan" element={<Scan />} />
           <Route path="/want-list" element={<WantList />} />
           <Route path="/for-trade" element={<ForTrade />} />
           <Route path="/watches" element={<Watches />} />

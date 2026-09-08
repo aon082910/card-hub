@@ -99,6 +99,18 @@ const DICTIONARY = {
 
     deck_summary_title: 'Deck Summary', deck_summary_total_cards: 'Total Cards', deck_summary_total_value: 'Total Value',
     deck_summary_by_category: 'By Category',
+
+    nav_scan: 'Scan', scan_title: 'Card Scanner', scan_setup_hint: 'Works with a plain USB webcam, or a purpose-built stand like the ',
+    scan_setup_link_text: 'MakerWorld card scanner stand', scan_setup_hint2: ' — point the camera at the slot and let cards glide through.',
+    scan_camera_label: 'Camera', scan_default_camera: 'Default camera', scan_no_camera: 'No camera detected. Plug in a USB camera and reload.',
+    scan_auto_capture: 'Auto-capture', scan_capture_now: 'Capture Now', scan_sensitivity: 'Sensitivity',
+    scan_zone_top: 'Capture Zone Position', scan_zone_height: 'Capture Zone Height', scan_mirror: 'Mirror preview',
+    scan_state_empty: 'Ready — slide a card through', scan_state_detecting: 'Card detected, holding...', scan_state_captured: 'Captured!',
+    scan_state_clearing: 'Clearing zone...',
+    scan_side_front: 'Front', scan_side_back: 'Back', scan_auto_alternate: 'Auto-alternate front/back',
+    scan_queue_title: 'Scanned Cards', scan_no_shots: 'No cards scanned yet — captures will appear here.',
+    scan_retake: 'Retake', scan_delete: 'Delete', scan_create_card: 'Create Card', scan_creating: 'Creating...',
+    scan_pair_incomplete: 'Missing side', scan_settings_title: 'Scanner Settings',
   },
   es: {
     nav_dashboard: 'Panel', nav_collection: 'Colección', nav_want_list: 'Lista de Deseos',
@@ -192,6 +204,18 @@ const DICTIONARY = {
 
     deck_summary_title: 'Resumen del Mazo', deck_summary_total_cards: 'Total de Cartas', deck_summary_total_value: 'Valor Total',
     deck_summary_by_category: 'Por Categoría',
+
+    nav_scan: 'Escanear', scan_title: 'Escáner de Cartas', scan_setup_hint: 'Funciona con una webcam USB normal, o con un soporte dedicado como el ',
+    scan_setup_link_text: 'soporte escáner de cartas de MakerWorld', scan_setup_hint2: ' — apunta la cámara a la ranura y deja que las cartas se deslicen.',
+    scan_camera_label: 'Cámara', scan_default_camera: 'Cámara predeterminada', scan_no_camera: 'No se detectó cámara. Conecta una cámara USB y recarga.',
+    scan_auto_capture: 'Captura automática', scan_capture_now: 'Capturar Ahora', scan_sensitivity: 'Sensibilidad',
+    scan_zone_top: 'Posición de la Zona de Captura', scan_zone_height: 'Altura de la Zona de Captura', scan_mirror: 'Vista previa en espejo',
+    scan_state_empty: 'Listo — desliza una carta', scan_state_detecting: 'Carta detectada, esperando...', scan_state_captured: '¡Capturada!',
+    scan_state_clearing: 'Despejando zona...',
+    scan_side_front: 'Frente', scan_side_back: 'Reverso', scan_auto_alternate: 'Alternar frente/reverso automáticamente',
+    scan_queue_title: 'Cartas Escaneadas', scan_no_shots: 'Aún no hay cartas escaneadas — las capturas aparecerán aquí.',
+    scan_retake: 'Repetir', scan_delete: 'Eliminar', scan_create_card: 'Crear Carta', scan_creating: 'Creando...',
+    scan_pair_incomplete: 'Falta un lado', scan_settings_title: 'Ajustes del Escáner',
   },
   fr: {
     nav_dashboard: 'Tableau de bord', nav_collection: 'Collection', nav_want_list: 'Liste de souhaits',
@@ -285,6 +309,18 @@ const DICTIONARY = {
 
     deck_summary_title: 'Résumé du Deck', deck_summary_total_cards: 'Total des Cartes', deck_summary_total_value: 'Valeur Totale',
     deck_summary_by_category: 'Par Catégorie',
+
+    nav_scan: 'Scanner', scan_title: 'Scanner de Cartes', scan_setup_hint: 'Fonctionne avec une simple webcam USB, ou un support dédié comme le ',
+    scan_setup_link_text: 'support scanner de cartes MakerWorld', scan_setup_hint2: ' — pointez la caméra vers la fente et laissez les cartes glisser.',
+    scan_camera_label: 'Caméra', scan_default_camera: 'Caméra par défaut', scan_no_camera: 'Aucune caméra détectée. Branchez une caméra USB et rechargez.',
+    scan_auto_capture: 'Capture automatique', scan_capture_now: 'Capturer Maintenant', scan_sensitivity: 'Sensibilité',
+    scan_zone_top: 'Position de la Zone de Capture', scan_zone_height: 'Hauteur de la Zone de Capture', scan_mirror: 'Aperçu en miroir',
+    scan_state_empty: 'Prêt — faites glisser une carte', scan_state_detecting: 'Carte détectée, en attente...', scan_state_captured: 'Capturée !',
+    scan_state_clearing: 'Dégagement de la zone...',
+    scan_side_front: 'Recto', scan_side_back: 'Verso', scan_auto_alternate: 'Alterner recto/verso automatiquement',
+    scan_queue_title: 'Cartes Scannées', scan_no_shots: 'Aucune carte scannée pour le moment — les captures apparaîtront ici.',
+    scan_retake: 'Reprendre', scan_delete: 'Supprimer', scan_create_card: 'Créer la Carte', scan_creating: 'Création...',
+    scan_pair_incomplete: 'Côté manquant', scan_settings_title: 'Paramètres du Scanner',
   },
 };
 
