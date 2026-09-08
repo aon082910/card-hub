@@ -5,8 +5,8 @@ import { api } from '../api.js';
 
 const SAMPLE_W = 48;
 const SAMPLE_H = 32;
-const OCCUPY_TICKS = 2; // consecutive occupied samples required before we snap (~ TICK_MS * this)
-const CLEAR_TICKS = 2; // consecutive empty samples required before re-arming
+const SETTLE_TICKS = 3; // consecutive still (low frame-to-frame diff) samples required before we snap
+const REFRACTORY_MS = 600; // ignore new motion right after a capture (card settling/bouncing in the tray)
 const FLASH_MS = 450;
 const TICK_MS = 90;
 
@@ -23,10 +23,10 @@ export default function Scan() {
   const sampleCanvasRef = useRef(null);
   const intervalRef = useRef(null);
 
-  const baselineRef = useRef(null);
-  const machineRef = useRef('empty'); // empty | cooldown
-  const occupiedStreakRef = useRef(0);
-  const clearStreakRef = useRef(0);
+  const prevSampleRef = useRef(null);
+  const machineRef = useRef('settled'); // settled (watching) | moving (card in transit)
+  const stillStreakRef = useRef(0);
+  const lastCaptureTimeRef = useRef(0);
   const sideRef = useRef('front');
   const autoAlternateRef = useRef(true);
 
@@ -90,8 +90,8 @@ export default function Scan() {
       }
       const list = await navigator.mediaDevices.enumerateDevices();
       setDevices(list.filter((d) => d.kind === 'videoinput'));
-      baselineRef.current = null;
-      machineRef.current = 'empty';
+      prevSampleRef.current = null;
+      machineRef.current = 'settled';
       setScanState('empty');
     } catch (e) {
       setError(e.message || 'Could not access camera');
@@ -111,10 +111,9 @@ export default function Scan() {
       sampleCanvasRef.current.width = SAMPLE_W;
       sampleCanvasRef.current.height = SAMPLE_H;
     }
-    baselineRef.current = null;
-    machineRef.current = 'empty';
-    occupiedStreakRef.current = 0;
-    clearStreakRef.current = 0;
+    prevSampleRef.current = null;
+    machineRef.current = 'settled';
+    stillStreakRef.current = 0;
     setScanState('empty');
     intervalRef.current = setInterval(tick, TICK_MS);
   }
@@ -150,50 +149,46 @@ export default function Scan() {
     if (!sample) return;
     const threshold = sensitivityToThreshold(sensitivity);
 
-    if (!baselineRef.current) {
-      baselineRef.current = sample;
+    if (!prevSampleRef.current) {
+      prevSampleRef.current = sample;
       return;
     }
 
     let diffSum = 0;
-    for (let i = 0; i < sample.length; i++) diffSum += Math.abs(sample[i] - baselineRef.current[i]);
-    const diffScore = diffSum / sample.length;
-    setLiveDiff(diffScore);
+    for (let i = 0; i < sample.length; i++) diffSum += Math.abs(sample[i] - prevSampleRef.current[i]);
+    const frameDiff = diffSum / sample.length;
+    prevSampleRef.current = sample;
+    setLiveDiff(frameDiff);
     setLiveThreshold(threshold);
-    const occupied = diffScore > threshold;
+    const moving = frameDiff > threshold;
 
     const state = machineRef.current;
-    if (state === 'empty') {
-      if (!occupied) {
-        const next = new Float32Array(sample.length);
-        for (let i = 0; i < sample.length; i++) next[i] = baselineRef.current[i] * 0.9 + sample[i] * 0.1;
-        baselineRef.current = next;
-        occupiedStreakRef.current = 0;
-        setScanState('empty');
-      } else {
-        occupiedStreakRef.current += 1;
+    if (state === 'settled') {
+      const inRefractory = performance.now() - lastCaptureTimeRef.current < REFRACTORY_MS;
+      if (moving && !inRefractory) {
+        machineRef.current = 'moving';
+        stillStreakRef.current = 0;
         setScanState('entering');
-        if (occupiedStreakRef.current >= OCCUPY_TICKS) {
+      } else {
+        setScanState('empty');
+      }
+    } else if (state === 'moving') {
+      if (moving) {
+        stillStreakRef.current = 0;
+      } else {
+        stillStreakRef.current += 1;
+        if (stillStreakRef.current >= SETTLE_TICKS) {
+          // Motion stopped - the card has landed in the tray. Snap the top card and go
+          // back to watching; no "wait for the tray to go empty" step, since it won't.
           doCapture();
-          machineRef.current = 'cooldown';
-          clearStreakRef.current = 0;
+          lastCaptureTimeRef.current = performance.now();
+          machineRef.current = 'settled';
+          stillStreakRef.current = 0;
           setScanState('captured');
           setTimeout(() => {
-            if (machineRef.current === 'cooldown') setScanState('cooldown');
+            if (machineRef.current === 'settled') setScanState('empty');
           }, FLASH_MS);
         }
-      }
-    } else if (state === 'cooldown') {
-      if (!occupied) {
-        clearStreakRef.current += 1;
-        if (clearStreakRef.current >= CLEAR_TICKS) {
-          machineRef.current = 'empty';
-          baselineRef.current = sample;
-          occupiedStreakRef.current = 0;
-          setScanState('empty');
-        }
-      } else {
-        clearStreakRef.current = 0;
       }
     }
   }
@@ -201,10 +196,15 @@ export default function Scan() {
   function doCapture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
+    const sx = (zoneLeft / 100) * video.videoWidth;
+    const sy = (zoneTop / 100) * video.videoHeight;
+    const sw = (zoneWidth / 100) * video.videoWidth;
+    const sh = (zoneHeight / 100) * video.videoHeight;
+    if (sw <= 0 || sh <= 0) return;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.width = sw;
+    canvas.height = sh;
+    canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
     canvas.toBlob((blob) => {
       if (!blob) return;
       addShot(blob, sideRef.current);
@@ -268,10 +268,9 @@ export default function Scan() {
     empty: t('scan_state_empty'),
     entering: t('scan_state_detecting'),
     captured: t('scan_state_captured'),
-    cooldown: t('scan_state_clearing'),
   }[scanState];
 
-  const zoneColor = { empty: '#3fa34d', entering: '#d9a62b', captured: '#e0453c', cooldown: '#d9a62b' }[scanState];
+  const zoneColor = { empty: '#3fa34d', entering: '#d9a62b', captured: '#e0453c' }[scanState];
 
   return (
     <div>
