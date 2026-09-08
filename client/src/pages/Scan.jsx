@@ -5,13 +5,14 @@ import { api } from '../api.js';
 
 const SAMPLE_W = 48;
 const SAMPLE_H = 32;
-const STABILIZE_MS = 350; // how long the zone must stay "occupied" before we snap
+const OCCUPY_TICKS = 2; // consecutive occupied samples required before we snap (~ TICK_MS * this)
+const CLEAR_TICKS = 2; // consecutive empty samples required before re-arming
 const FLASH_MS = 450;
-const TICK_MS = 130;
+const TICK_MS = 90;
 
 function sensitivityToThreshold(sensitivity) {
-  // sensitivity 0-100 -> threshold ~40 (insensitive) down to ~7 (very sensitive)
-  return 40 - (sensitivity / 100) * 33;
+  // sensitivity 0-100 -> threshold ~32 (insensitive) down to ~4 (very sensitive)
+  return 32 - (sensitivity / 100) * 28;
 }
 
 export default function Scan() {
@@ -23,8 +24,9 @@ export default function Scan() {
   const intervalRef = useRef(null);
 
   const baselineRef = useRef(null);
-  const machineRef = useRef('empty'); // empty | entering | cooldown
-  const enterTimeRef = useRef(0);
+  const machineRef = useRef('empty'); // empty | cooldown
+  const occupiedStreakRef = useRef(0);
+  const clearStreakRef = useRef(0);
   const sideRef = useRef('front');
   const autoAlternateRef = useRef(true);
 
@@ -33,13 +35,17 @@ export default function Scan() {
   const [error, setError] = useState(null);
 
   const [autoCapture, setAutoCapture] = useState(true);
-  const [sensitivity, setSensitivity] = useState(55);
-  const [zoneTop, setZoneTop] = useState(30);
-  const [zoneHeight, setZoneHeight] = useState(40);
+  const [sensitivity, setSensitivity] = useState(65);
+  const [zoneTop, setZoneTop] = useState(20);
+  const [zoneHeight, setZoneHeight] = useState(60);
+  const [zoneLeft, setZoneLeft] = useState(20);
+  const [zoneWidth, setZoneWidth] = useState(60);
   const [mirror, setMirror] = useState(false);
   const [side, setSide] = useState('front');
   const [autoAlternate, setAutoAlternate] = useState(true);
   const [scanState, setScanState] = useState('empty'); // empty | entering | captured | cooldown
+  const [liveDiff, setLiveDiff] = useState(0);
+  const [liveThreshold, setLiveThreshold] = useState(0);
 
   const [pairs, setPairs] = useState([]);
   const [creatingId, setCreatingId] = useState(null);
@@ -58,7 +64,7 @@ export default function Scan() {
     if (autoCapture) startAnalyzing();
     return stopAnalyzing;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCapture, sensitivity, zoneTop, zoneHeight]);
+  }, [autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth]);
 
   useEffect(() => () => {
     pairs.forEach((p) => {
@@ -107,6 +113,8 @@ export default function Scan() {
     }
     baselineRef.current = null;
     machineRef.current = 'empty';
+    occupiedStreakRef.current = 0;
+    clearStreakRef.current = 0;
     setScanState('empty');
     intervalRef.current = setInterval(tick, TICK_MS);
   }
@@ -121,10 +129,11 @@ export default function Scan() {
   function sampleZone() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return null;
-    const sx = 0;
+    const sx = (zoneLeft / 100) * video.videoWidth;
     const sy = (zoneTop / 100) * video.videoHeight;
-    const sw = video.videoWidth;
+    const sw = (zoneWidth / 100) * video.videoWidth;
     const sh = (zoneHeight / 100) * video.videoHeight;
+    if (sw <= 0 || sh <= 0) return null;
     const canvas = sampleCanvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, sx, sy, sw, sh, 0, 0, SAMPLE_W, SAMPLE_H);
@@ -149,36 +158,42 @@ export default function Scan() {
     let diffSum = 0;
     for (let i = 0; i < sample.length; i++) diffSum += Math.abs(sample[i] - baselineRef.current[i]);
     const diffScore = diffSum / sample.length;
+    setLiveDiff(diffScore);
+    setLiveThreshold(threshold);
+    const occupied = diffScore > threshold;
 
     const state = machineRef.current;
     if (state === 'empty') {
-      const next = new Float32Array(sample.length);
-      for (let i = 0; i < sample.length; i++) next[i] = baselineRef.current[i] * 0.9 + sample[i] * 0.1;
-      baselineRef.current = next;
-      if (diffScore > threshold) {
-        machineRef.current = 'entering';
-        enterTimeRef.current = performance.now();
+      if (!occupied) {
+        const next = new Float32Array(sample.length);
+        for (let i = 0; i < sample.length; i++) next[i] = baselineRef.current[i] * 0.9 + sample[i] * 0.1;
+        baselineRef.current = next;
+        occupiedStreakRef.current = 0;
+        setScanState('empty');
+      } else {
+        occupiedStreakRef.current += 1;
         setScanState('entering');
-      }
-    } else if (state === 'entering') {
-      if (diffScore > threshold) {
-        if (performance.now() - enterTimeRef.current > STABILIZE_MS) {
+        if (occupiedStreakRef.current >= OCCUPY_TICKS) {
           doCapture();
           machineRef.current = 'cooldown';
+          clearStreakRef.current = 0;
           setScanState('captured');
           setTimeout(() => {
             if (machineRef.current === 'cooldown') setScanState('cooldown');
           }, FLASH_MS);
         }
-      } else {
-        machineRef.current = 'empty';
-        setScanState('empty');
       }
     } else if (state === 'cooldown') {
-      if (diffScore < threshold) {
-        machineRef.current = 'empty';
-        baselineRef.current = sample;
-        setScanState('empty');
+      if (!occupied) {
+        clearStreakRef.current += 1;
+        if (clearStreakRef.current >= CLEAR_TICKS) {
+          machineRef.current = 'empty';
+          baselineRef.current = sample;
+          occupiedStreakRef.current = 0;
+          setScanState('empty');
+        }
+      } else {
+        clearStreakRef.current = 0;
       }
     }
   }
@@ -280,10 +295,19 @@ export default function Scan() {
             <video ref={videoRef} playsInline muted className="camera-video" />
             <div
               className="scan-zone"
-              style={{ top: `${zoneTop}%`, height: `${zoneHeight}%`, borderColor: zoneColor, boxShadow: `0 0 0 2000px rgba(0,0,0,0.35) inset, inset 0 0 20px ${zoneColor}` }}
+              style={{
+                top: `${zoneTop}%`, height: `${zoneHeight}%`, left: `${zoneLeft}%`, width: `${zoneWidth}%`,
+                borderColor: zoneColor, boxShadow: `0 0 0 2000px rgba(0,0,0,0.35) inset, inset 0 0 20px ${zoneColor}`,
+              }}
             />
           </div>
           <div className={`scan-status-pill state-${scanState}`}>{stateLabel}</div>
+          {autoCapture && (
+            <div className="scan-diff-meter" title="Live motion signal vs. capture threshold — tune Sensitivity so a card passing reliably crosses the line.">
+              <div className="scan-diff-meter-fill" style={{ width: `${Math.min(100, (liveDiff / (liveThreshold * 2 || 1)) * 100)}%` }} />
+              <div className="scan-diff-meter-threshold" style={{ left: '50%' }} />
+            </div>
+          )}
 
           <div className="camera-controls">
             {devices.length > 1 && (
@@ -327,9 +351,18 @@ export default function Scan() {
             {t('scan_zone_height')}
             <input type="range" min="10" max="100" value={zoneHeight} onChange={(e) => setZoneHeight(Number(e.target.value))} />
           </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
+            {t('scan_zone_left')}
+            <input type="range" min="0" max="90" value={zoneLeft} onChange={(e) => setZoneLeft(Number(e.target.value))} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
+            {t('scan_zone_width')}
+            <input type="range" min="10" max="100" value={zoneWidth} onChange={(e) => setZoneWidth(Number(e.target.value))} />
+          </label>
           <label className="checkbox-label">
             <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> {t('scan_mirror')}
           </label>
+          <p className="hint-text" style={{ marginTop: '0.75rem' }}>{t('scan_tuning_hint')}</p>
         </section>
       </div>
 
