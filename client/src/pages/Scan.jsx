@@ -15,6 +15,19 @@ function sensitivityToThreshold(sensitivity) {
   return 32 - (sensitivity / 100) * 28;
 }
 
+const SETTINGS_KEY = 'card-hub-scan-settings';
+const DEFAULT_SETTINGS = {
+  autoCapture: true, sensitivity: 65, zoneTop: 20, zoneHeight: 60, zoneLeft: 20, zoneWidth: 60,
+  mirror: false, autoAlternate: true, deviceId: null,
+};
+function loadSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
 export default function Scan() {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -30,19 +43,21 @@ export default function Scan() {
   const sideRef = useRef('front');
   const autoAlternateRef = useRef(true);
 
+  const initialSettings = useRef(loadSettings()).current;
+
   const [devices, setDevices] = useState([]);
-  const [deviceId, setDeviceId] = useState(null);
+  const [deviceId, setDeviceId] = useState(initialSettings.deviceId);
   const [error, setError] = useState(null);
 
-  const [autoCapture, setAutoCapture] = useState(true);
-  const [sensitivity, setSensitivity] = useState(65);
-  const [zoneTop, setZoneTop] = useState(20);
-  const [zoneHeight, setZoneHeight] = useState(60);
-  const [zoneLeft, setZoneLeft] = useState(20);
-  const [zoneWidth, setZoneWidth] = useState(60);
-  const [mirror, setMirror] = useState(false);
+  const [autoCapture, setAutoCapture] = useState(initialSettings.autoCapture);
+  const [sensitivity, setSensitivity] = useState(initialSettings.sensitivity);
+  const [zoneTop, setZoneTop] = useState(initialSettings.zoneTop);
+  const [zoneHeight, setZoneHeight] = useState(initialSettings.zoneHeight);
+  const [zoneLeft, setZoneLeft] = useState(initialSettings.zoneLeft);
+  const [zoneWidth, setZoneWidth] = useState(initialSettings.zoneWidth);
+  const [mirror, setMirror] = useState(initialSettings.mirror);
   const [side, setSide] = useState('front');
-  const [autoAlternate, setAutoAlternate] = useState(true);
+  const [autoAlternate, setAutoAlternate] = useState(initialSettings.autoAlternate);
   const [scanState, setScanState] = useState('empty'); // empty | entering | captured | cooldown
   const [liveDiff, setLiveDiff] = useState(0);
   const [liveThreshold, setLiveThreshold] = useState(0);
@@ -74,6 +89,14 @@ export default function Scan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId,
+      }));
+    } catch { /* ignore */ }
+  }, [autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId]);
+
   async function startStream() {
     stopStream();
     setError(null);
@@ -82,7 +105,15 @@ export default function Scan() {
         video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } },
         audio: false,
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        if (!deviceId) throw err;
+        // A saved camera from a previous visit is no longer plugged in - fall back to the default.
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        setDeviceId(null);
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
