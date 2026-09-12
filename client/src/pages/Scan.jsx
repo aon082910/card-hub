@@ -62,10 +62,19 @@ async function identifyCard(imageUrl) {
   return null;
 }
 
+const RESOLUTION_PRESETS = {
+  auto: null,
+  '480p': { width: 640, height: 480 },
+  '720p': { width: 1280, height: 720 },
+  '1080p': { width: 1920, height: 1080 },
+  '1440p': { width: 2560, height: 1440 },
+  '4k': { width: 3840, height: 2160 },
+};
+
 const SETTINGS_KEY = 'card-hub-scan-settings';
 const DEFAULT_SETTINGS = {
   autoCapture: true, sensitivity: 65, zoneTop: 20, zoneHeight: 60, zoneLeft: 20, zoneWidth: 60,
-  mirror: false, autoAlternate: true, deviceId: null,
+  mirror: false, autoAlternate: true, deviceId: null, resolution: '1080p',
 };
 function loadSettings() {
   try {
@@ -97,6 +106,8 @@ export default function Scan() {
 
   const [devices, setDevices] = useState([]);
   const [deviceId, setDeviceId] = useState(initialSettings.deviceId);
+  const [resolution, setResolution] = useState(initialSettings.resolution);
+  const [actualResolution, setActualResolution] = useState(null);
   const [error, setError] = useState(null);
 
   const [autoCapture, setAutoCapture] = useState(initialSettings.autoCapture);
@@ -132,7 +143,7 @@ export default function Scan() {
     startStream();
     return stopStream;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId]);
+  }, [deviceId, resolution]);
 
   useEffect(() => {
     stopAnalyzing();
@@ -152,10 +163,10 @@ export default function Scan() {
   useEffect(() => {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-        autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId,
+        autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId, resolution,
       }));
     } catch { /* ignore */ }
-  }, [autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId]);
+  }, [autoCapture, sensitivity, zoneTop, zoneHeight, zoneLeft, zoneWidth, mirror, autoAlternate, deviceId, resolution]);
 
   async function startStream() {
     stopStream();
@@ -163,9 +174,11 @@ export default function Scan() {
     try {
       // Ask for the sharpest feed the camera offers - without an explicit resolution,
       // some USB webcams default to a low-res mode that looks blurry once cropped in on.
-      const resolution = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+      // "ideal" is a hint, not a guarantee - the browser negotiates the closest the camera supports.
+      const preset = RESOLUTION_PRESETS[resolution];
+      const resConstraint = preset ? { width: { ideal: preset.width }, height: { ideal: preset.height } } : {};
       const constraints = {
-        video: deviceId ? { deviceId: { exact: deviceId }, ...resolution } : { facingMode: { ideal: 'environment' }, ...resolution },
+        video: deviceId ? { deviceId: { exact: deviceId }, ...resConstraint } : { facingMode: { ideal: 'environment' }, ...resConstraint },
         audio: false,
       };
       let stream;
@@ -174,13 +187,14 @@ export default function Scan() {
       } catch (err) {
         if (!deviceId) throw err;
         // A saved camera from a previous visit is no longer plugged in - fall back to the default.
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, ...resolution }, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, ...resConstraint }, audio: false });
         setDeviceId(null);
       }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        setActualResolution(`${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
       }
       const list = await navigator.mediaDevices.enumerateDevices();
       setDevices(list.filter((d) => d.kind === 'videoinput'));
@@ -188,6 +202,7 @@ export default function Scan() {
       machineRef.current = 'settled';
       setScanState('empty');
     } catch (e) {
+      setActualResolution(null);
       setError(e.message || 'Could not access camera');
     }
   }
@@ -527,9 +542,18 @@ export default function Scan() {
                 ))}
               </select>
             )}
+            <select value={resolution} onChange={(e) => setResolution(e.target.value)} title={t('scan_resolution')}>
+              <option value="auto">{t('scan_resolution_auto')}</option>
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+              <option value="1440p">1440p</option>
+              <option value="4k">4K</option>
+            </select>
             <button className="btn primary" onClick={() => doCapture(false)}>📸 {t('scan_capture_now')}</button>
             <button className="btn" disabled={!lastAction} onClick={undoLastCapture}>↩ {t('scan_undo')}</button>
           </div>
+          {actualResolution && <p className="hint-text" style={{ margin: '0.3rem 0 0' }}>{t('scan_actual_resolution')}: {actualResolution}</p>}
 
           <div className="scan-side-row">
             <label className="checkbox-label">
