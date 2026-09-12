@@ -41,6 +41,26 @@ async function preprocess(imageUrl) {
   return canvas;
 }
 
+// Pokemon, Magic, and Yu-Gi-Oh all put the card name in a band across the very top of
+// the card (roughly the top fifth) - sports cards vary too much layout-to-layout for
+// this to hold universally, but for the three TCGs this holds reliably enough to crop
+// straight to it, giving Tesseract a small, artwork-free strip to read instead of
+// having the name buried among dozens of noisier lines pulled off the full card.
+const NAME_BAND_HEIGHT_FRACTION = 0.2;
+
+function cropTop(canvas, heightFraction) {
+  const cropped = document.createElement('canvas');
+  cropped.width = canvas.width;
+  cropped.height = Math.round(canvas.height * heightFraction);
+  cropped.getContext('2d').drawImage(canvas, 0, 0, canvas.width, cropped.height, 0, 0, canvas.width, cropped.height);
+  return cropped;
+}
+
+async function recognizeLines(worker, canvas) {
+  const { data } = await worker.recognize(canvas);
+  return data.text.split('\n').map((l) => l.trim()).filter((l) => l.length > 1);
+}
+
 let workerPromise = null;
 async function getWorker() {
   if (!workerPromise) {
@@ -65,15 +85,19 @@ async function getWorker() {
 // Runs OCR on a card photo and returns cleaned, deduplicated candidate lines - shared
 // by the manual "Extract Text" tool (OcrAssist.jsx) and the Scan page's automatic card
 // identification, so both benefit from the same preprocessing and Tesseract tuning.
+// Reads the top name-band first so the card's actual name (not artwork noise) is the
+// first, most likely candidate line, then falls back to the full image for anything
+// else (set info, rules text) or for layouts the name-band guess doesn't fit.
 export async function extractCardText(imageUrl) {
   const canvas = await preprocess(imageUrl);
   const worker = await getWorker();
-  const { data } = await worker.recognize(canvas);
+  const bandLines = await recognizeLines(worker, cropTop(canvas, NAME_BAND_HEIGHT_FRACTION));
+  const fullLines = await recognizeLines(worker, canvas);
+
   const seen = new Set();
   const lines = [];
-  for (const raw of data.text.split('\n')) {
-    const line = raw.trim();
-    if (line.length > 1 && !seen.has(line)) {
+  for (const line of [...bandLines, ...fullLines]) {
+    if (!seen.has(line)) {
       seen.add(line);
       lines.push(line);
     }
