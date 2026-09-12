@@ -10,6 +10,20 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(IMAGES_DIR)) fs.mkdirSync(IMAGES_DIR, { recursive: true });
 
 const dbPath = path.join(DATA_DIR, 'cardhub.db');
+
+// A restore staged via Settings -> Automated Backups writes the chosen backup here rather
+// than swapping the live file while it's open (unsafe with an active WAL). Swap it in now,
+// before anything opens the database - this only takes effect after a container restart.
+const pendingRestorePath = path.join(DATA_DIR, 'restore-pending.db');
+if (fs.existsSync(pendingRestorePath)) {
+  for (const suffix of ['', '-wal', '-shm']) {
+    const p = dbPath + suffix;
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+  }
+  fs.renameSync(pendingRestorePath, dbPath);
+  console.log('Card-Hub: restored database from a staged backup');
+}
+
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');

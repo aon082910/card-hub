@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useLanguage } from '../i18n.jsx';
+import LineChart from '../components/LineChart.jsx';
 
 function money(n) {
   return `$${Number(n || 0).toFixed(2)}`;
@@ -38,6 +39,13 @@ export default function Dashboard() {
           <div className={`stat-value ${data.profit >= 0 ? 'positive' : 'negative'}`}>{money(data.profit)}</div>
         </div>
       </div>
+
+      {data.valueOverTime.length > 1 && (
+        <section className="panel">
+          <h2>{t('dashboard_value_over_time')}</h2>
+          <LineChart data={data.valueOverTime.map((d) => ({ label: d.day, value: d.value }))} />
+        </section>
+      )}
 
       <div className="panel-row">
         <section className="panel">

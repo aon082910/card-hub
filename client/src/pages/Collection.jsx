@@ -84,13 +84,21 @@ export default function Collection() {
     setShareUrl(`${window.location.origin}/share/${link.token}`);
   }
 
+  async function shareCollection() {
+    const link = await api.createShareLink({ label: 'My Collection', kind: 'collection' });
+    setShareUrl(`${window.location.origin}/share/${link.token}`);
+  }
+
   const sortIndicator = (col) => (sort === col ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
 
   return (
     <div>
       <div className="page-header">
         <h1>{t('collection_title')} ({total})</h1>
-        <Link className="btn primary" to="/collection/new">{t('dashboard_add_card')}</Link>
+        <div className="cta-row">
+          <button className="btn" onClick={shareCollection}>{t('collection_share_collection')}</button>
+          <Link className="btn primary" to="/collection/new">{t('dashboard_add_card')}</Link>
+        </div>
       </div>
 
       <div className="filter-bar">

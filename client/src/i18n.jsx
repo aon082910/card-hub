@@ -20,11 +20,12 @@ const DICTIONARY = {
     dashboard_title: 'Dashboard', dashboard_total_cards: 'Total Cards', dashboard_collection_value: 'Collection Value',
     dashboard_total_cost: 'Total Cost Basis', dashboard_profit: 'Realized Profit', dashboard_by_category: 'By Category',
     dashboard_recent_sales: 'Recent Sales', dashboard_add_card: '+ Add Card', dashboard_view_collection: 'View Collection',
-    dashboard_no_sales: 'No sales yet',
+    dashboard_no_sales: 'No sales yet', dashboard_value_over_time: 'Value Over Time',
 
     collection_title: 'Collection', collection_search: 'Search player, set, tags...', collection_all_categories: 'All categories',
     collection_all_statuses: 'All statuses', collection_save_view: 'Save View', collection_selected: 'selected',
     collection_no_cards: 'No cards found', collection_col_player: 'Player/Character', collection_col_set: 'Set',
+    collection_share_collection: '📖 Share My Collection',
     collection_col_year: 'Year', collection_col_grade: 'Grade', collection_col_qty: 'Qty', collection_col_cost: 'Cost',
     collection_col_value: 'Value', collection_col_status: 'Status',
 
@@ -130,11 +131,12 @@ const DICTIONARY = {
     dashboard_title: 'Panel', dashboard_total_cards: 'Total de Cartas', dashboard_collection_value: 'Valor de la Colección',
     dashboard_total_cost: 'Costo Total', dashboard_profit: 'Ganancia Realizada', dashboard_by_category: 'Por Categoría',
     dashboard_recent_sales: 'Ventas Recientes', dashboard_add_card: '+ Añadir Carta', dashboard_view_collection: 'Ver Colección',
-    dashboard_no_sales: 'Aún no hay ventas',
+    dashboard_no_sales: 'Aún no hay ventas', dashboard_value_over_time: 'Valor a lo Largo del Tiempo',
 
     collection_title: 'Colección', collection_search: 'Buscar jugador, set, etiquetas...', collection_all_categories: 'Todas las categorías',
     collection_all_statuses: 'Todos los estados', collection_save_view: 'Guardar Vista', collection_selected: 'seleccionado(s)',
     collection_no_cards: 'No se encontraron cartas', collection_col_player: 'Jugador/Personaje', collection_col_set: 'Set',
+    collection_share_collection: '📖 Compartir Mi Colección',
     collection_col_year: 'Año', collection_col_grade: 'Grado', collection_col_qty: 'Cant.', collection_col_cost: 'Costo',
     collection_col_value: 'Valor', collection_col_status: 'Estado',
 
@@ -240,11 +242,12 @@ const DICTIONARY = {
     dashboard_title: 'Tableau de bord', dashboard_total_cards: 'Total des Cartes', dashboard_collection_value: 'Valeur de la Collection',
     dashboard_total_cost: 'Coût Total', dashboard_profit: 'Profit Réalisé', dashboard_by_category: 'Par Catégorie',
     dashboard_recent_sales: 'Ventes Récentes', dashboard_add_card: '+ Ajouter une Carte', dashboard_view_collection: 'Voir la Collection',
-    dashboard_no_sales: 'Aucune vente pour le moment',
+    dashboard_no_sales: 'Aucune vente pour le moment', dashboard_value_over_time: 'Valeur au Fil du Temps',
 
     collection_title: 'Collection', collection_search: 'Rechercher joueur, set, étiquettes...', collection_all_categories: 'Toutes les catégories',
     collection_all_statuses: 'Tous les statuts', collection_save_view: 'Enregistrer la Vue', collection_selected: 'sélectionné(s)',
     collection_no_cards: 'Aucune carte trouvée', collection_col_player: 'Joueur/Personnage', collection_col_set: 'Set',
+    collection_share_collection: '📖 Partager Ma Collection',
     collection_col_year: 'Année', collection_col_grade: 'Note', collection_col_qty: 'Qté', collection_col_cost: 'Coût',
     collection_col_value: 'Valeur', collection_col_status: 'Statut',
 

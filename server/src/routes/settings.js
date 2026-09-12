@@ -10,6 +10,7 @@ const SECRET_KEYS = new Set([
 
 const PUBLIC_KEYS = [
   'site_title', 'default_theme', 'snapshot_enabled', 'snapshot_hour',
+  'backup_enabled', 'backup_hour', 'backup_retention',
   'price_provider', 'pokewallet_api_key',
   'ebay_client_id', 'ebay_client_secret', 'ebay_redirect_uri', 'ebay_connected',
   'ebay_payment_policy_id', 'ebay_return_policy_id', 'ebay_fulfillment_policy_id',

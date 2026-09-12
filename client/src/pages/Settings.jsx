@@ -15,12 +15,67 @@ export default function Settings() {
   const [auditLog, setAuditLog] = useState([]);
   const [showAudit, setShowAudit] = useState(false);
   const [apiKeyMsg, setApiKeyMsg] = useState(null);
+  const [backups, setBackups] = useState([]);
+  const [backupMsg, setBackupMsg] = useState(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [restoreFile, setRestoreFile] = useState(null);
 
   function load() {
     api.getSettings().then(setSettings);
-    if (user?.role === 'admin') api.listUsers().then(setUsers).catch(() => {});
+    if (user?.role === 'admin') {
+      api.listUsers().then(setUsers).catch(() => {});
+      api.listBackups().then(setBackups).catch(() => {});
+    }
   }
   useEffect(load, [user]);
+
+  async function handleTakeBackup() {
+    setBackupBusy(true);
+    try {
+      await api.takeBackupNow();
+      setBackupMsg({ ok: true, text: 'Backup taken.' });
+      api.listBackups().then(setBackups);
+    } catch (e) {
+      setBackupMsg({ ok: false, text: e.message });
+    } finally {
+      setBackupBusy(false);
+      setTimeout(() => setBackupMsg(null), 3000);
+    }
+  }
+
+  async function handleDeleteBackup(filename) {
+    if (!confirm(`Delete backup "${filename}"?`)) return;
+    await api.deleteBackup(filename);
+    api.listBackups().then(setBackups);
+  }
+
+  async function handleRestore(filename) {
+    if (!confirm(`Restore the database from "${filename}"? Your current data will be replaced after you restart the container. This cannot be undone from within the app.`)) return;
+    try {
+      const res = await api.restoreBackup(filename);
+      setBackupMsg({ ok: true, text: res.message });
+    } catch (e) {
+      setBackupMsg({ ok: false, text: e.message });
+    }
+  }
+
+  async function handleRestoreUpload() {
+    if (!restoreFile) return;
+    if (!confirm('Restore the database from this uploaded file? Your current data will be replaced after you restart the container. This cannot be undone from within the app.')) return;
+    try {
+      const res = await api.restoreBackupUpload(restoreFile);
+      setBackupMsg({ ok: true, text: res.message });
+      setRestoreFile(null);
+    } catch (e) {
+      setBackupMsg({ ok: false, text: e.message });
+    }
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   function set(field, value) {
     setSettings((s) => ({ ...s, [field]: value }));
@@ -216,6 +271,60 @@ export default function Settings() {
           <button className="btn" onClick={async () => { await api.takeSnapshot(); setSaveMsg('Snapshot taken.'); setTimeout(() => setSaveMsg(null), 2000); }}>Take Snapshot Now</button>
         </div>
       </section>
+
+      {user?.role === 'admin' && (
+        <section className="panel">
+          <h2>Automated Backups</h2>
+          <p className="hint-text">
+            Backs up the whole database (using SQLite's online backup API - safe to run while the app is in use)
+            to <code>data/backups/</code>. Restoring is staged and applied on the next container restart, rather
+            than swapping the live file - keep your Docker/Unraid restart policy set to something other than
+            "no restart" if you want an in-app restore to actually take effect after you confirm it.
+          </p>
+          <div className="form-grid">
+            <label className="checkbox-label">
+              <input type="checkbox" checked={!!settings.backup_enabled} onChange={(e) => set('backup_enabled', e.target.checked)} />
+              Enabled
+            </label>
+            <label>Hour of day (0-23, server time)
+              <input type="number" min="0" max="23" value={settings.backup_hour ?? 4} onChange={(e) => set('backup_hour', Number(e.target.value))} />
+            </label>
+            <label>Keep last N backups
+              <input type="number" min="1" max="365" value={settings.backup_retention ?? 14} onChange={(e) => set('backup_retention', Number(e.target.value))} />
+            </label>
+          </div>
+          <div className="cta-row">
+            <button className="btn" onClick={handleTakeBackup} disabled={backupBusy}>{backupBusy ? 'Backing up...' : 'Take Backup Now'}</button>
+          </div>
+          {backupMsg && <p className={backupMsg.ok ? 'hint-text' : 'error-text'}>{backupMsg.text}</p>}
+
+          {backups.length > 0 && (
+            <table className="simple-table" style={{ marginTop: '1rem' }}>
+              <thead><tr><th>File</th><th>Size</th><th>Created</th><th></th></tr></thead>
+              <tbody>
+                {backups.map((b) => (
+                  <tr key={b.filename}>
+                    <td>{b.filename}</td>
+                    <td>{formatBytes(b.size)}</td>
+                    <td>{new Date(b.created_at).toLocaleString()}</td>
+                    <td className="cta-row">
+                      <a className="btn small" href={`/api/backups/${encodeURIComponent(b.filename)}/download`}>Download</a>
+                      <button className="btn small" onClick={() => handleRestore(b.filename)}>Restore</button>
+                      <button className="btn small danger" onClick={() => handleDeleteBackup(b.filename)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {backups.length === 0 && <p className="hint-text">No backups yet.</p>}
+
+          <div className="cta-row" style={{ marginTop: '1rem' }}>
+            <input type="file" accept=".db" onChange={(e) => setRestoreFile(e.target.files[0] || null)} />
+            <button className="btn" disabled={!restoreFile} onClick={handleRestoreUpload}>Restore From Uploaded File</button>
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Automatic Price Lookup</h2>

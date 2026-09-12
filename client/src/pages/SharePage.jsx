@@ -26,7 +26,7 @@ export default function SharePage() {
         {!error && data === undefined && <p>Loading...</p>}
         {data && (
           <div>
-            <h1>{data.label || (data.kind === 'wanted' ? 'Want List' : 'Shared Cards')}</h1>
+            <h1>{data.label || (data.kind === 'wanted' ? 'Want List' : data.kind === 'collection' ? 'My Collection' : data.kind === 'for_trade' ? 'For Trade' : 'Shared Cards')}</h1>
             <p className="hint-text">A read-only view shared from someone's Card-Hub collection.</p>
             <div className="image-gallery">
               {data.cards.map((c) => (

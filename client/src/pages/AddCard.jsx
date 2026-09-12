@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CardForm from '../components/CardForm.jsx';
 import CardLookup from '../components/CardLookup.jsx';
 import { useLanguage } from '../i18n.jsx';
@@ -9,8 +9,11 @@ const GAME_LABELS = { pokemon: 'Pokemon', yugioh: 'Yu-Gi-Oh', magic: 'Magic: The
 
 export default function AddCard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
-  const [prefill, setPrefill] = useState(null);
+  // A set's checklist grid can deep-link here with a prefilled category/set/number
+  // via router state (see Sets.jsx) - e.g. jumping straight to logging card #42 of a set.
+  const [prefill, setPrefill] = useState(() => location.state?.prefill || null);
   const [formKey, setFormKey] = useState(0);
   const [pendingImage, setPendingImage] = useState(null);
   const [showLookup, setShowLookup] = useState(null); // 'pokemon' | 'yugioh' | 'magic' | null

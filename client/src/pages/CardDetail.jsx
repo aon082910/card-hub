@@ -5,6 +5,7 @@ import CameraCapture from '../components/CameraCapture.jsx';
 import BarcodeScanner from '../components/BarcodeScanner.jsx';
 import OcrAssist from '../components/OcrAssist.jsx';
 import CardLookup from '../components/CardLookup.jsx';
+import LineChart from '../components/LineChart.jsx';
 import { useLanguage } from '../i18n.jsx';
 import { api } from '../api.js';
 import { queueUpload } from '../offlineQueue.js';
@@ -231,6 +232,9 @@ export default function CardDetail() {
       {card.values.length > 0 && (
         <section className="panel">
           <h2>{t('value_history_title')}</h2>
+          {card.values.length > 1 && (
+            <LineChart data={card.values.map((v) => ({ label: v.recorded_at.slice(0, 10), value: v.value }))} />
+          )}
           <table className="simple-table">
             <thead><tr><th>{t('col_date')}</th><th>{t('collection_col_value')}</th><th>{t('col_source')}</th></tr></thead>
             <tbody>

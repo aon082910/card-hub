@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useLanguage } from '../i18n.jsx';
 
 const empty = { name: '', category: 'sports', sport_or_game: '', year: '', manufacturer: '', total_cards: '', notes: '' };
+
+function normalizeNumber(raw) {
+  const digits = String(raw ?? '').replace(/[^\d]/g, '');
+  if (!digits) return null;
+  return String(parseInt(digits, 10));
+}
 
 export default function Sets() {
   const { t } = useLanguage();
@@ -93,19 +100,69 @@ export default function Sets() {
             ) : (
               <p>{s.owned_count} owned (no total set)</p>
             )}
-            <button className="btn small" onClick={() => toggleExpand(s)}>{expanded === s.id ? 'Hide' : 'Show'} owned cards</button>
+            <button className="btn small" onClick={() => toggleExpand(s)}>{expanded === s.id ? 'Hide' : 'Show'} checklist</button>
             {expanded === s.id && detail && (
-              <ul className="simple-table" style={{ marginTop: '0.5rem' }}>
-                {detail.cards.map((c) => (
-                  <li key={c.id}>#{c.card_number || '?'} — {c.player_or_character || '(unnamed)'}</li>
-                ))}
-                {detail.cards.length === 0 && <li>No cards matched yet.</li>}
-              </ul>
+              s.total_cards > 0 ? (
+                <SetChecklistGrid set={s} detail={detail} />
+              ) : (
+                <ul className="simple-table" style={{ marginTop: '0.5rem' }}>
+                  {detail.cards.map((c) => (
+                    <li key={c.id}>#{c.card_number || '?'} — {c.player_or_character || '(unnamed)'}</li>
+                  ))}
+                  {detail.cards.length === 0 && <li>No cards matched yet.</li>}
+                </ul>
+              )
             )}
           </div>
         ))}
         {sets.length === 0 && <p>No sets defined yet.</p>}
       </div>
+    </div>
+  );
+}
+
+function SetChecklistGrid({ set: s, detail }) {
+  const ownedByNumber = new Map();
+  for (const c of detail.cards) {
+    const n = normalizeNumber(c.card_number);
+    if (n && !ownedByNumber.has(n)) ownedByNumber.set(n, c);
+  }
+  const cells = [];
+  for (let n = 1; n <= s.total_cards; n++) cells.push(n);
+
+  return (
+    <div className="set-checklist-grid">
+      {cells.map((n) => {
+        const owned = ownedByNumber.get(String(n));
+        if (owned) {
+          return (
+            <Link
+              key={n}
+              to={`/collection/${owned.id}`}
+              className="set-checklist-cell owned"
+              title={owned.player_or_character || `#${n}`}
+            >
+              {n}
+            </Link>
+          );
+        }
+        return (
+          <Link
+            key={n}
+            to="/collection/new"
+            state={{
+              prefill: {
+                category: s.category, sport_or_game: s.sport_or_game || '', set_name: s.name,
+                year: s.year || '', manufacturer: s.manufacturer || '', card_number: String(n),
+              },
+            }}
+            className="set-checklist-cell missing"
+            title={`Add card #${n}`}
+          >
+            {n}
+          </Link>
+        );
+      })}
     </div>
   );
 }

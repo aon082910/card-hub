@@ -26,10 +26,11 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 
 **Sets & checklists**
 - Define a set (name/year/manufacturer/total card count) and track completion against your actual collection.
+- Visual checklist grid: every card number 1..N in the set as a clickable cell — green and linked to the card if you own it, muted and linked straight to a pre-filled Add Card form (set/year/manufacturer/number already in) if you don't.
 
 **Want List & sharing**
 - Mark a card's status as "Wanted" and it shows up on the dedicated **Want List** page.
-- **Share links**: generate a public, read-only, no-login-required link for your want list, a single card, or any selection of cards from Collection (bulk-select → Share Selected). Shared data is deliberately limited to non-sensitive fields (no cost basis, purchase source, or storage location).
+- **Share links**: generate a public, read-only, no-login-required link for your want list, a single card, your whole collection (Collection → Share My Collection), or any selection of cards from Collection (bulk-select → Share Selected). Shared data is deliberately limited to non-sensitive fields (no cost basis, purchase source, or storage location).
 
 **Decks & binders**
 - Group cards from your collection into a named **Deck** (a deck you play, or a binder page you're curating) without duplicating card records — a deck just references existing cards and a quantity.
@@ -63,7 +64,7 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 
 **Purchase, sales & value tracking**
 - Cost basis, purchase source/date, sale price, fees, shipping, platform, buyer, automatic quantity/status updates, realized profit reporting.
-- Per-card value history, plus automated daily portfolio-value snapshots (configurable time-of-day, or trigger one manually) feeding the dashboard's value-over-time data.
+- Per-card value history, plus automated daily portfolio-value snapshots (configurable time-of-day, or trigger one manually) feeding the dashboard's value-over-time data — both charted with a lightweight built-in line chart (no external charting library).
 - Pluggable price-lookup architecture (Settings → Automatic Price Lookup), all real implementations (none are stubs):
   - **TCGdex** (Pokemon), **YGOPRODeck** (Yu-Gi-Oh), **Scryfall** (Magic USD), **Cardhoarder** (Magic Online tickets, via Scryfall's aggregated data), and **Card Kingdom** (Magic retail, via their public bulk pricelist, cached 12h) — all free, keyless, work immediately.
   - **[PokéWallet](https://www.pokewallet.io/)** (Pokemon) needs a free API key from pokewallet.io.
@@ -88,6 +89,10 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 - Simple login (session-based). A default admin account is created on first run — see below.
 - Admins can add/remove additional user accounts.
 - Every create/update/delete is recorded to an activity/audit log (Settings → Activity Log), including who did it.
+
+**Automated backups** (admin-only, Settings → Automated Backups)
+- Daily database backup using SQLite's online backup API (safe to run while the app is in use, unlike copying the `.db` file directly), with configurable time-of-day and how many backups to keep — plus a "Take Backup Now" button.
+- Download or delete any backup; restore from an existing backup or an uploaded `.db` file. Restoring is staged rather than applied immediately (swapping a live, open database file is unsafe) — it takes effect on the next container restart.
 
 **Appearance & installability**
 - Dark/light theme toggle (defaults to your OS preference, remembered per-browser).

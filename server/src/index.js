@@ -5,6 +5,7 @@ const path = require('path');
 const { IMAGES_DIR } = require('./db');
 const { requireAuth } = require('./middleware/auth');
 const { startScheduler } = require('./lib/snapshotJob');
+const { startScheduler: startBackupScheduler } = require('./lib/backupJob');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -38,6 +39,7 @@ app.use('/api/decks', requireAuth, require('./routes/decks'));
 app.use('/api/trades', requireAuth, require('./routes/trades'));
 app.use('/api/share', requireAuth, require('./routes/share'));
 app.use('/api/watches', requireAuth, require('./routes/watches'));
+app.use('/api/backups', requireAuth, require('./routes/backups'));
 
 // Not auth-gated: this is what a public share link resolves to (opted into by an admin/member
 // generating the link), and share pages need to display the referenced card images.
@@ -53,4 +55,5 @@ app.get('*', (req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Card-Hub server listening on port ${PORT}`);
   startScheduler();
+  startBackupScheduler();
 });

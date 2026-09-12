@@ -100,6 +100,16 @@ export const api = {
   deleteWatch: (id) => request(`/watches/${id}`, { method: 'DELETE' }),
   checkWatch: (id) => request(`/watches/${id}/check`, { method: 'POST' }),
 
+  listBackups: () => request('/backups'),
+  takeBackupNow: () => request('/backups', { method: 'POST' }),
+  deleteBackup: (filename) => request(`/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }),
+  restoreBackup: (filename) => request(`/backups/${encodeURIComponent(filename)}/restore`, { method: 'POST' }),
+  restoreBackupUpload: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/backups/restore-upload', { method: 'POST', body: form });
+  },
+
   previewImport: (file) => {
     const form = new FormData();
     form.append('file', file);
