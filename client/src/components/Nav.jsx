@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { useLanguage, LANGUAGES } from '../i18n.jsx';
 import { api } from '../api.js';
@@ -12,11 +12,52 @@ function getInitialTheme() {
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
+function NavDropdown({ id, label, badge, items, openGroup, setOpenGroup }) {
+  const isOpen = openGroup === id;
+  const ref = useRef(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpenGroup((g) => (g === id ? null : g));
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => { setOpenGroup((g) => (g === id ? null : g)); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isActive = items.some((it) => location.pathname === it.to || location.pathname.startsWith(`${it.to}/`));
+
+  return (
+    <div className="nav-dropdown" ref={ref}>
+      <button
+        type="button"
+        className={`nav-dropdown-toggle ${isActive ? 'active' : ''}`}
+        onClick={() => setOpenGroup((g) => (g === id ? null : id))}
+      >
+        {label}{badge > 0 ? ` (${badge})` : ''} <span className="nav-caret">▾</span>
+      </button>
+      {isOpen && (
+        <div className="nav-dropdown-menu">
+          {items.map((it) => (
+            <NavLink key={it.to} to={it.to} className="nav-dropdown-item" onClick={() => setOpenGroup(null)}>
+              {it.label}{it.badge > 0 ? ` (${it.badge})` : ''}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Nav() {
   const { user, logout } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const [theme, setTheme] = useState(getInitialTheme);
   const [unread, setUnread] = useState(0);
+  const [openGroup, setOpenGroup] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -38,18 +79,47 @@ export default function Nav() {
         <NavLink to="/" end>{t('nav_dashboard')}</NavLink>
         <NavLink to="/collection">{t('nav_collection')}</NavLink>
         <NavLink to="/scan">{t('nav_scan')}</NavLink>
-        <NavLink to="/want-list">{t('nav_want_list')}</NavLink>
-        <NavLink to="/for-trade">{t('nav_for_trade')}</NavLink>
-        <NavLink to="/decks">{t('nav_decks')}</NavLink>
-        <NavLink to="/grading">{t('nav_grading')}</NavLink>
-        <NavLink to="/sales">{t('nav_sales')}</NavLink>
-        <NavLink to="/trades">{t('nav_trades')}</NavLink>
-        <NavLink to="/listings">{t('nav_listings')}</NavLink>
-        <NavLink to="/watches">{t('nav_watches')}</NavLink>
-        <NavLink to="/trade-match">{t('nav_trade_match')}</NavLink>
-        <NavLink to="/friends">Friends</NavLink>
-        <NavLink to="/messages">Messages{unread > 0 ? ` (${unread})` : ''}</NavLink>
-        <NavLink to="/sets">{t('nav_sets')}</NavLink>
+
+        <NavDropdown
+          id="organize"
+          label={t('nav_group_organize')}
+          openGroup={openGroup}
+          setOpenGroup={setOpenGroup}
+          items={[
+            { to: '/want-list', label: t('nav_want_list') },
+            { to: '/for-trade', label: t('nav_for_trade') },
+            { to: '/decks', label: t('nav_decks') },
+            { to: '/sets', label: t('nav_sets') },
+            { to: '/grading', label: t('nav_grading') },
+          ]}
+        />
+
+        <NavDropdown
+          id="marketplace"
+          label={t('nav_group_marketplace')}
+          openGroup={openGroup}
+          setOpenGroup={setOpenGroup}
+          items={[
+            { to: '/sales', label: t('nav_sales') },
+            { to: '/trades', label: t('nav_trades') },
+            { to: '/listings', label: t('nav_listings') },
+            { to: '/watches', label: t('nav_watches') },
+            { to: '/trade-match', label: t('nav_trade_match') },
+          ]}
+        />
+
+        <NavDropdown
+          id="community"
+          label={t('nav_group_community')}
+          badge={unread}
+          openGroup={openGroup}
+          setOpenGroup={setOpenGroup}
+          items={[
+            { to: '/friends', label: 'Friends' },
+            { to: '/messages', label: 'Messages', badge: unread },
+          ]}
+        />
+
         <NavLink to="/reports">{t('nav_reports')}</NavLink>
         <NavLink to="/settings">{t('nav_settings')}</NavLink>
       </nav>

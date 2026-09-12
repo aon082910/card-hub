@@ -74,6 +74,23 @@ body {
 .nav-links { display: flex; gap: 1.2rem; flex-wrap: wrap; flex: 1; }
 .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 0.95rem; padding: 0.3rem 0; }
 .nav-links a.active, .nav-links a:hover { color: var(--text); border-bottom: 2px solid var(--accent); }
+.nav-dropdown { position: relative; }
+.nav-dropdown-toggle {
+  background: none; border: none; color: var(--text-dim); font-size: 0.95rem; padding: 0.3rem 0;
+  cursor: pointer; display: flex; align-items: center; gap: 0.2rem; font-family: inherit;
+}
+.nav-dropdown-toggle:hover, .nav-dropdown-toggle.active { color: var(--text); border-bottom: 2px solid var(--accent); }
+.nav-caret { font-size: 0.7rem; }
+.nav-dropdown-menu {
+  position: absolute; top: 100%; left: 0; margin-top: 0.5rem; background: var(--panel);
+  border: 1px solid var(--border); border-radius: var(--radius); min-width: 160px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 20; display: flex; flex-direction: column; padding: 0.3rem;
+}
+.nav-dropdown-menu a {
+  color: var(--text-dim); text-decoration: none; font-size: 0.9rem; padding: 0.45rem 0.6rem; border-radius: 4px;
+}
+.nav-dropdown-menu a.active, .nav-dropdown-menu a:hover { color: var(--text); background: var(--panel-2); }
+
 .nav-right { display: flex; align-items: center; gap: 0.6rem; }
 .nav-right .lang-select { width: auto; padding: 0.3rem 0.4rem; font-size: 0.8rem; }
 .nav-user { color: var(--text-dim); font-size: 0.85rem; }

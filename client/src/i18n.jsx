@@ -12,6 +12,7 @@ const DICTIONARY = {
     nav_decks: 'Decks', nav_grading: 'Grading', nav_sales: 'Sales', nav_trades: 'Trades',
     nav_listings: 'Listings', nav_sets: 'Sets', nav_reports: 'Reports', nav_settings: 'Settings', nav_watches: 'Watches',
     nav_trade_match: 'Trade Match',
+    nav_group_organize: 'Organize', nav_group_marketplace: 'Marketplace', nav_group_community: 'Community',
 
     btn_save: 'Save', btn_delete: 'Delete', btn_cancel: 'Cancel', btn_add: 'Add',
     btn_edit: 'Edit', btn_close: 'Close', btn_search: 'Search', btn_log_out: 'Log out',
@@ -132,6 +133,7 @@ const DICTIONARY = {
     nav_decks: 'Mazos', nav_grading: 'Clasificación', nav_sales: 'Ventas', nav_trades: 'Intercambios',
     nav_listings: 'Publicaciones', nav_sets: 'Colecciones', nav_reports: 'Informes', nav_settings: 'Ajustes', nav_watches: 'Alertas',
     nav_trade_match: 'Coincidencia de Intercambio',
+    nav_group_organize: 'Organizar', nav_group_marketplace: 'Mercado', nav_group_community: 'Comunidad',
 
     btn_save: 'Guardar', btn_delete: 'Eliminar', btn_cancel: 'Cancelar', btn_add: 'Añadir',
     btn_edit: 'Editar', btn_close: 'Cerrar', btn_search: 'Buscar', btn_log_out: 'Cerrar sesión',
@@ -252,6 +254,7 @@ const DICTIONARY = {
     nav_decks: 'Decks', nav_grading: 'Gradation', nav_sales: 'Ventes', nav_trades: 'Échanges',
     nav_listings: 'Annonces', nav_sets: 'Séries', nav_reports: 'Rapports', nav_settings: 'Paramètres', nav_watches: 'Alertes',
     nav_trade_match: "Correspondance d'Échange",
+    nav_group_organize: 'Organiser', nav_group_marketplace: 'Marché', nav_group_community: 'Communauté',
 
     btn_save: 'Enregistrer', btn_delete: 'Supprimer', btn_cancel: 'Annuler', btn_add: 'Ajouter',
     btn_edit: 'Modifier', btn_close: 'Fermer', btn_search: 'Rechercher', btn_log_out: 'Se déconnecter',
