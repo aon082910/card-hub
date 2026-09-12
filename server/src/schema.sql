@@ -246,7 +246,6 @@ CREATE TABLE IF NOT EXISTS trade_requests (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cards_category ON cards(category);
-CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id);

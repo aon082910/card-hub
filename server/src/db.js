@@ -61,6 +61,11 @@ addColumnsIfMissing('decks', { user_id: 'INTEGER REFERENCES users(id) ON DELETE 
 addColumnsIfMissing('ebay_watches', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
 addColumnsIfMissing('portfolio_snapshots', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
 
+// Only safe to create after the user_id backfill above - on an upgrade, schema.sql's own
+// CREATE TABLE IF NOT EXISTS is a no-op against the pre-existing cards table, so an index
+// on cards(user_id) inside schema.sql would fail with "no such column" before this point.
+db.exec('CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id)');
+
 // Seed a default admin account on first run so the app is usable out of the box.
 const userCount = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
 if (userCount === 0) {
