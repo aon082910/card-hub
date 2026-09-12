@@ -113,6 +113,9 @@ const DICTIONARY = {
     scan_queue_title: 'Scanned Cards', scan_no_shots: 'No cards scanned yet — captures will appear here.',
     scan_retake: 'Retake', scan_delete: 'Delete', scan_create_card: 'Create Card', scan_creating: 'Creating...',
     scan_pair_incomplete: 'Missing side', scan_settings_title: 'Scanner Settings',
+    scan_session_count_label: 'Scanned this session:', scan_undo: 'Undo Last',
+    scan_duplicate_skipped: 'Duplicate capture skipped (looked the same as the last shot).',
+    scan_identifying: 'Identifying card...',
   },
   es: {
     nav_dashboard: 'Panel', nav_collection: 'Colección', nav_want_list: 'Lista de Deseos',
@@ -220,6 +223,9 @@ const DICTIONARY = {
     scan_queue_title: 'Cartas Escaneadas', scan_no_shots: 'Aún no hay cartas escaneadas — las capturas aparecerán aquí.',
     scan_retake: 'Repetir', scan_delete: 'Eliminar', scan_create_card: 'Crear Carta', scan_creating: 'Creando...',
     scan_pair_incomplete: 'Falta un lado', scan_settings_title: 'Ajustes del Escáner',
+    scan_session_count_label: 'Escaneadas en esta sesión:', scan_undo: 'Deshacer Última',
+    scan_duplicate_skipped: 'Captura duplicada omitida (igual a la última foto).',
+    scan_identifying: 'Identificando carta...',
   },
   fr: {
     nav_dashboard: 'Tableau de bord', nav_collection: 'Collection', nav_want_list: 'Liste de souhaits',
@@ -327,6 +333,9 @@ const DICTIONARY = {
     scan_queue_title: 'Cartes Scannées', scan_no_shots: 'Aucune carte scannée pour le moment — les captures apparaîtront ici.',
     scan_retake: 'Reprendre', scan_delete: 'Supprimer', scan_create_card: 'Créer la Carte', scan_creating: 'Création...',
     scan_pair_incomplete: 'Côté manquant', scan_settings_title: 'Paramètres du Scanner',
+    scan_session_count_label: 'Scannées cette session :', scan_undo: 'Annuler la Dernière',
+    scan_duplicate_skipped: 'Capture en double ignorée (identique à la dernière photo).',
+    scan_identifying: 'Identification de la carte...',
   },
 };
 

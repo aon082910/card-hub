@@ -9,10 +9,56 @@ const SETTLE_TICKS = 3; // consecutive still (low frame-to-frame diff) samples r
 const REFRACTORY_MS = 600; // ignore new motion right after a capture (card settling/bouncing in the tray)
 const FLASH_MS = 450;
 const TICK_MS = 90;
+const NOTICE_MS = 2000;
+const DUPLICATE_THRESHOLD = 2.5; // mean grayscale diff below which two auto-captures count as the same shot
+const MIN_CROP_AREA_RATIO = 0.15; // bounding-box area (of the zone) below which we don't trust the auto-crop
+const CROP_MARGIN_RATIO = 0.08; // padding added around the detected card edges
 
 function sensitivityToThreshold(sensitivity) {
   // sensitivity 0-100 -> threshold ~32 (insensitive) down to ~4 (very sensitive)
   return 32 - (sensitivity / 100) * 28;
+}
+
+const GAME_LABELS = { pokemon: 'Pokemon', yugioh: 'Yu-Gi-Oh', magic: 'Magic: The Gathering' };
+const LOOKUP_GAMES = [
+  { key: 'pokemon', lookup: (q) => api.lookupPokemon(q) },
+  { key: 'yugioh', lookup: (q) => api.lookupYugioh(q) },
+  { key: 'magic', lookup: (q) => api.lookupMagic(q) },
+];
+
+// Runs the same OCR-then-search pipeline as the manual "Extract Text" flow (see
+// OcrAssist.jsx), but automatically: tries the first few text lines detected on the
+// card against all three card databases and takes the first hit, so a batch-scanned
+// card can land on its detail page already filled in instead of blank.
+async function identifyCard(imageUrl) {
+  const Tesseract = await import('tesseract.js');
+  const { data } = await Tesseract.recognize(imageUrl, 'eng');
+  const lines = data.text.split('\n').map((l) => l.trim()).filter((l) => l.length > 1).slice(0, 5);
+  for (const line of lines) {
+    for (const game of LOOKUP_GAMES) {
+      let rows;
+      try {
+        rows = await game.lookup(line);
+      } catch {
+        continue;
+      }
+      if (!rows || !rows.length) continue;
+      let row = rows[0];
+      if (game.key === 'pokemon' && row.source === 'tcgdex') {
+        row = await api.lookupPokemonCard(row.id).catch(() => row);
+      }
+      return {
+        category: 'tcg',
+        sport_or_game: GAME_LABELS[game.key],
+        player_or_character: row.name,
+        set_name: row.setName || '',
+        card_number: row.number || '',
+        rarity: row.rarity || '',
+        current_value: row.marketPriceUsd ?? '',
+      };
+    }
+  }
+  return null;
 }
 
 const SETTINGS_KEY = 'card-hub-scan-settings';
@@ -37,6 +83,8 @@ export default function Scan() {
   const intervalRef = useRef(null);
 
   const prevSampleRef = useRef(null);
+  const backgroundSampleRef = useRef(null); // sample from just before motion started - used to isolate the card for auto-crop
+  const lastCapturedSampleRef = useRef(null); // sample at the last auto-capture - used for the duplicate-shot guard
   const machineRef = useRef('settled'); // settled (watching) | moving (card in transit)
   const stillStreakRef = useRef(0);
   const lastCaptureTimeRef = useRef(0);
@@ -64,7 +112,16 @@ export default function Scan() {
 
   const [pairs, setPairs] = useState([]);
   const [creatingId, setCreatingId] = useState(null);
+  const [creatingPhase, setCreatingPhase] = useState(null); // 'identify' | 'create' | null
   const [preview, setPreview] = useState(null); // { url, label } | null
+  const [sessionCount, setSessionCount] = useState(0);
+  const [notice, setNotice] = useState(null);
+  const [lastAction, setLastAction] = useState(null); // { pairId, side } of the most recent capture, for Undo
+
+  function showNotice(text) {
+    setNotice(text);
+    setTimeout(() => setNotice((cur) => (cur === text ? null : cur)), NOTICE_MS);
+  }
 
   useEffect(() => { sideRef.current = side; }, [side]);
   useEffect(() => { autoAlternateRef.current = autoAlternate; }, [autoAlternate]);
@@ -186,8 +243,9 @@ export default function Scan() {
       return;
     }
 
+    const priorSample = prevSampleRef.current;
     let diffSum = 0;
-    for (let i = 0; i < sample.length; i++) diffSum += Math.abs(sample[i] - prevSampleRef.current[i]);
+    for (let i = 0; i < sample.length; i++) diffSum += Math.abs(sample[i] - priorSample[i]);
     const frameDiff = diffSum / sample.length;
     prevSampleRef.current = sample;
     setLiveDiff(frameDiff);
@@ -200,6 +258,7 @@ export default function Scan() {
       if (moving && !inRefractory) {
         machineRef.current = 'moving';
         stillStreakRef.current = 0;
+        backgroundSampleRef.current = priorSample;
         setScanState('entering');
       } else {
         setScanState('empty');
@@ -212,7 +271,7 @@ export default function Scan() {
         if (stillStreakRef.current >= SETTLE_TICKS) {
           // Motion stopped - the card has landed in the tray. Snap the top card and go
           // back to watching; no "wait for the tray to go empty" step, since it won't.
-          doCapture();
+          doCapture(true);
           lastCaptureTimeRef.current = performance.now();
           machineRef.current = 'settled';
           stillStreakRef.current = 0;
@@ -225,20 +284,82 @@ export default function Scan() {
     }
   }
 
-  function doCapture() {
+  function getZoneRectFull(video) {
+    return {
+      sx: (zoneLeft / 100) * video.videoWidth,
+      sy: (zoneTop / 100) * video.videoHeight,
+      sw: (zoneWidth / 100) * video.videoWidth,
+      sh: (zoneHeight / 100) * video.videoHeight,
+    };
+  }
+
+  // Narrows the full capture-zone rect down to just the card, using the diff between
+  // the zone right before motion started (backgroundSample) and right after it settled
+  // (currentSample) to find the card's bounding box. Falls back to the full zone if the
+  // signal is too weak/small to trust (e.g. lighting change, no real background sample yet).
+  function computeCropRect(currentSample, backgroundSample, zoneRect) {
+    if (!backgroundSample) return zoneRect;
+    const threshold = Math.max(6, sensitivityToThreshold(sensitivity) * 0.6);
+    let minX = SAMPLE_W;
+    let maxX = -1;
+    let minY = SAMPLE_H;
+    let maxY = -1;
+    for (let y = 0; y < SAMPLE_H; y++) {
+      for (let x = 0; x < SAMPLE_W; x++) {
+        const idx = y * SAMPLE_W + x;
+        if (Math.abs(currentSample[idx] - backgroundSample[idx]) > threshold) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return zoneRect;
+    const boxW = maxX - minX + 1;
+    const boxH = maxY - minY + 1;
+    if ((boxW * boxH) / (SAMPLE_W * SAMPLE_H) < MIN_CROP_AREA_RATIO) return zoneRect;
+    const marginX = Math.max(1, Math.round(boxW * CROP_MARGIN_RATIO));
+    const marginY = Math.max(1, Math.round(boxH * CROP_MARGIN_RATIO));
+    const gx0 = Math.max(0, minX - marginX);
+    const gx1 = Math.min(SAMPLE_W, maxX + 1 + marginX);
+    const gy0 = Math.max(0, minY - marginY);
+    const gy1 = Math.min(SAMPLE_H, maxY + 1 + marginY);
+    const scaleX = zoneRect.sw / SAMPLE_W;
+    const scaleY = zoneRect.sh / SAMPLE_H;
+    return {
+      sx: zoneRect.sx + gx0 * scaleX,
+      sy: zoneRect.sy + gy0 * scaleY,
+      sw: (gx1 - gx0) * scaleX,
+      sh: (gy1 - gy0) * scaleY,
+    };
+  }
+
+  function doCapture(isAuto = false) {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const sx = (zoneLeft / 100) * video.videoWidth;
-    const sy = (zoneTop / 100) * video.videoHeight;
-    const sw = (zoneWidth / 100) * video.videoWidth;
-    const sh = (zoneHeight / 100) * video.videoHeight;
-    if (sw <= 0 || sh <= 0) return;
+    const zoneRect = getZoneRectFull(video);
+    const rect = isAuto ? computeCropRect(prevSampleRef.current, backgroundSampleRef.current, zoneRect) : zoneRect;
+    if (rect.sw <= 0 || rect.sh <= 0) return;
+
+    if (isAuto && prevSampleRef.current && lastCapturedSampleRef.current) {
+      let diffSum = 0;
+      for (let i = 0; i < prevSampleRef.current.length; i++) {
+        diffSum += Math.abs(prevSampleRef.current[i] - lastCapturedSampleRef.current[i]);
+      }
+      if (diffSum / prevSampleRef.current.length < DUPLICATE_THRESHOLD) {
+        showNotice(t('scan_duplicate_skipped'));
+        return;
+      }
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = sw;
-    canvas.height = sh;
-    canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+    canvas.width = rect.sw;
+    canvas.height = rect.sh;
+    canvas.getContext('2d').drawImage(video, rect.sx, rect.sy, rect.sw, rect.sh, 0, 0, rect.sw, rect.sh);
     canvas.toBlob((blob) => {
       if (!blob) return;
+      if (isAuto && prevSampleRef.current) lastCapturedSampleRef.current = prevSampleRef.current;
       addShot(blob, sideRef.current);
       if (autoAlternateRef.current) {
         setSide((s) => (s === 'front' ? 'back' : 'front'));
@@ -252,19 +373,37 @@ export default function Scan() {
       const next = [...prev];
       const lastIdx = next.length - 1;
       const last = next[lastIdx];
+      let targetId;
       if (shotSide === 'front') {
-        if (last && !last.front) next[lastIdx] = { ...last, front: { blob, url } };
-        else next.push({ id: `${Date.now()}-${Math.random()}`, front: { blob, url }, back: null });
+        if (last && !last.front) {
+          targetId = last.id;
+          next[lastIdx] = { ...last, front: { blob, url } };
+        } else {
+          targetId = `${Date.now()}-${Math.random()}`;
+          next.push({ id: targetId, front: { blob, url }, back: null });
+        }
       } else if (last && last.front && !last.back) {
+        targetId = last.id;
         next[lastIdx] = { ...last, back: { blob, url } };
       } else {
-        next.push({ id: `${Date.now()}-${Math.random()}`, front: null, back: { blob, url } });
+        targetId = `${Date.now()}-${Math.random()}`;
+        next.push({ id: targetId, front: null, back: { blob, url } });
       }
+      setLastAction({ pairId: targetId, side: shotSide });
       return next;
     });
+    setSessionCount((c) => c + 1);
+  }
+
+  function undoLastCapture() {
+    if (!lastAction) return;
+    removeShot(lastAction.pairId, lastAction.side);
+    setLastAction(null);
+    setSessionCount((c) => Math.max(0, c - 1));
   }
 
   function removeShot(pairId, shotSide) {
+    setLastAction((cur) => (cur && cur.pairId === pairId && cur.side === shotSide ? null : cur));
     setPairs((prev) => prev.map((p) => {
       if (p.id !== pairId) return p;
       if (p[shotSide]) {
@@ -276,6 +415,7 @@ export default function Scan() {
   }
 
   function deletePair(pairId) {
+    setLastAction((cur) => (cur && cur.pairId === pairId ? null : cur));
     setPairs((prev) => prev.filter((p) => {
       if (p.id !== pairId) return true;
       if (p.front) {
@@ -293,7 +433,14 @@ export default function Scan() {
   async function createCardFromPair(pair) {
     setCreatingId(pair.id);
     try {
-      const card = await api.createCard({ category: 'tcg' });
+      let fields = { category: 'tcg' };
+      if (pair.front) {
+        setCreatingPhase('identify');
+        const identified = await identifyCard(pair.front.url).catch(() => null);
+        if (identified) fields = identified;
+      }
+      setCreatingPhase('create');
+      const card = await api.createCard(fields);
       if (pair.front) await api.uploadImage(card.id, pair.front.blob, 'front');
       if (pair.back) await api.uploadImage(card.id, pair.back.blob, 'back');
       deletePair(pair.id);
@@ -302,6 +449,7 @@ export default function Scan() {
       alert(e.message || 'Failed to create card');
     } finally {
       setCreatingId(null);
+      setCreatingPhase(null);
     }
   }
 
@@ -341,7 +489,11 @@ export default function Scan() {
               }}
             />
           </div>
-          <div className={`scan-status-pill state-${scanState}`}>{stateLabel}</div>
+          <div className="scan-status-row">
+            <div className={`scan-status-pill state-${scanState}`}>{stateLabel}</div>
+            <span className="scan-session-count">{t('scan_session_count_label')} {sessionCount}</span>
+          </div>
+          {notice && <p className="hint-text scan-notice">{notice}</p>}
           {autoCapture && (
             <div className="scan-diff-meter" title="Live motion signal vs. capture threshold — tune Sensitivity so a card passing reliably crosses the line.">
               <div className="scan-diff-meter-fill" style={{ width: `${Math.min(100, (liveDiff / (liveThreshold * 2 || 1)) * 100)}%` }} />
@@ -358,7 +510,8 @@ export default function Scan() {
                 ))}
               </select>
             )}
-            <button className="btn primary" onClick={doCapture}>📸 {t('scan_capture_now')}</button>
+            <button className="btn primary" onClick={() => doCapture(false)}>📸 {t('scan_capture_now')}</button>
+            <button className="btn" disabled={!lastAction} onClick={undoLastCapture}>↩ {t('scan_undo')}</button>
           </div>
 
           <div className="scan-side-row">
@@ -431,7 +584,7 @@ export default function Scan() {
                 </div>
                 <div className="scan-pair-actions">
                   <button className="btn primary small" disabled={creatingId === p.id} onClick={() => createCardFromPair(p)}>
-                    {creatingId === p.id ? t('scan_creating') : t('scan_create_card')}
+                    {creatingId === p.id ? (creatingPhase === 'identify' ? t('scan_identifying') : t('scan_creating')) : t('scan_create_card')}
                   </button>
                   <button className="btn small danger" onClick={() => deletePair(p.id)}>{t('scan_delete')}</button>
                 </div>
