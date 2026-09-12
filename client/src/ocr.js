@@ -56,25 +56,19 @@ function cropTop(canvas, heightFraction) {
   return cropped;
 }
 
-async function recognizeLines(worker, canvas) {
-  const { data } = await worker.recognize(canvas);
-  return data.text.split('\n').map((l) => l.trim()).filter((l) => l.length > 1);
+// tesseract.js is a heavy WASM/JS payload - dynamic import, not a static one, so it
+// only ever loads for someone who actually uses OCR, not on every page. Cached so
+// repeated OCR calls (and the two passes within one call) reuse the same module/worker.
+let tesseractModPromise = null;
+function getTesseract() {
+  if (!tesseractModPromise) tesseractModPromise = import('tesseract.js');
+  return tesseractModPromise;
 }
 
 let workerPromise = null;
 async function getWorker() {
   if (!workerPromise) {
-    // Dynamic import, not a static one - tesseract.js is a heavy WASM/JS payload that
-    // should only ever load for someone who actually uses OCR, not on every page.
-    workerPromise = (async () => {
-      const { createWorker, PSM } = await import('tesseract.js');
-      const worker = await createWorker('eng');
-      // Sparse text: a card photo is scattered blocks of text over artwork, not a
-      // uniform printed page - Tesseract's default "fully automatic" layout mode
-      // often misreads or skips text sitting close to graphics.
-      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      return worker;
-    })().catch((e) => {
+    workerPromise = getTesseract().then(({ createWorker }) => createWorker('eng')).catch((e) => {
       workerPromise = null; // let the next call retry instead of caching a failure
       throw e;
     });
@@ -82,17 +76,26 @@ async function getWorker() {
   return workerPromise;
 }
 
+async function recognizeLines(worker, canvas, psm) {
+  await worker.setParameters({ tessedit_pageseg_mode: psm });
+  const { data } = await worker.recognize(canvas);
+  return data.text.split('\n').map((l) => l.trim()).filter((l) => l.length > 1);
+}
+
 // Runs OCR on a card photo and returns cleaned, deduplicated candidate lines - shared
 // by the manual "Extract Text" tool (OcrAssist.jsx) and the Scan page's automatic card
 // identification, so both benefit from the same preprocessing and Tesseract tuning.
-// Reads the top name-band first so the card's actual name (not artwork noise) is the
-// first, most likely candidate line, then falls back to the full image for anything
-// else (set info, rules text) or for layouts the name-band guess doesn't fit.
+// Two passes, each with a page-segmentation mode suited to what's actually there:
 export async function extractCardText(imageUrl) {
-  const canvas = await preprocess(imageUrl);
-  const worker = await getWorker();
-  const bandLines = await recognizeLines(worker, cropTop(canvas, NAME_BAND_HEIGHT_FRACTION));
-  const fullLines = await recognizeLines(worker, canvas);
+  const [canvas, { PSM }, worker] = await Promise.all([preprocess(imageUrl), getTesseract(), getWorker()]);
+
+  // The name band is a single line of large text once cropped - SINGLE_LINE reads it
+  // as one continuous line. SPARSE_TEXT (used here previously) assumes scattered,
+  // unrelated words with no order and was fragmenting the name into separate pieces.
+  const bandLines = await recognizeLines(worker, cropTop(canvas, NAME_BAND_HEIGHT_FRACTION), PSM.SINGLE_LINE);
+  // The full card genuinely has scattered, unrelated text blocks in different areas
+  // (name, type line, rules text, set info) - sparse text mode fits that instead.
+  const fullLines = await recognizeLines(worker, canvas, PSM.SPARSE_TEXT);
 
   const seen = new Set();
   const lines = [];
