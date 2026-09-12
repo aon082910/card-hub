@@ -44,13 +44,13 @@ const EXPORT_COLUMNS = [
   { key: 'notes', header: 'Notes', width: 24 },
 ];
 
-function getFilteredCards(query) {
+function getFilteredCards(query, userId) {
   const { category, status } = query;
-  const where = [];
-  const params = {};
+  const where = ['user_id = @userId'];
+  const params = { userId };
   if (category) { where.push('category = @category'); params.category = category; }
   if (status) { where.push('status = @status'); params.status = status; }
-  const sql = `SELECT * FROM cards ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY category, player_or_character`;
+  const sql = `SELECT * FROM cards WHERE ${where.join(' AND ')} ORDER BY category, player_or_character`;
   return db.prepare(sql).all(params);
 }
 
@@ -61,7 +61,7 @@ function columnsForPreset(preset) {
 }
 
 router.get('/excel', async (req, res) => {
-  const cards = getFilteredCards(req.query);
+  const cards = getFilteredCards(req.query, req.session.userId);
   const columns = columnsForPreset(req.query.preset);
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Card-Hub';
@@ -78,7 +78,7 @@ router.get('/excel', async (req, res) => {
 });
 
 router.get('/csv', (req, res) => {
-  const cards = getFilteredCards(req.query);
+  const cards = getFilteredCards(req.query, req.session.userId);
   const columns = columnsForPreset(req.query.preset);
   const headers = columns.map(c => c.header);
   const escape = (v) => {
@@ -96,7 +96,7 @@ router.get('/csv', (req, res) => {
 });
 
 router.get('/pdf', (req, res) => {
-  const cards = getFilteredCards(req.query);
+  const cards = getFilteredCards(req.query, req.session.userId);
   const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="card-hub-collection.pdf"');
@@ -160,7 +160,7 @@ router.get('/pdf', (req, res) => {
 
 // Photo catalog: same filters, but shows the front image (when present) next to each card's details.
 router.get('/pdf-photos', async (req, res) => {
-  const cards = getFilteredCards(req.query);
+  const cards = getFilteredCards(req.query, req.session.userId);
   const images = db.prepare('SELECT * FROM card_images WHERE side = ?').all('front');
   const frontByCard = new Map(images.map((i) => [i.card_id, i.filename]));
 
@@ -205,9 +205,9 @@ router.get('/labels', async (req, res) => {
   if (req.query.ids) {
     const ids = String(req.query.ids).split(',').map(Number).filter(Boolean);
     const placeholders = ids.map(() => '?').join(',');
-    cards = ids.length ? db.prepare(`SELECT * FROM cards WHERE id IN (${placeholders})`).all(...ids) : [];
+    cards = ids.length ? db.prepare(`SELECT * FROM cards WHERE id IN (${placeholders}) AND user_id = ?`).all(...ids, req.session.userId) : [];
   } else {
-    cards = getFilteredCards(req.query);
+    cards = getFilteredCards(req.query, req.session.userId);
   }
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;

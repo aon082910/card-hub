@@ -40,16 +40,17 @@ router.post('/excel', upload.single('file'), async (req, res) => {
   const headerRow = ws.getRow(1).values.slice(1).map(h => String(h).trim());
 
   let inserted = 0;
+  const importFields = Object.values(HEADER_TO_FIELD).filter((v, i, a) => a.indexOf(v) === i);
   const insertStmt = db.prepare(`
-    INSERT INTO cards (${Object.values(HEADER_TO_FIELD).filter((v, i, a) => a.indexOf(v) === i).join(',')})
-    VALUES (${Object.values(HEADER_TO_FIELD).filter((v, i, a) => a.indexOf(v) === i).map(f => '@' + f).join(',')})
+    INSERT INTO cards (user_id, ${importFields.join(',')})
+    VALUES (@user_id, ${importFields.map(f => '@' + f).join(',')})
   `);
 
   const tx = db.transaction((rows) => {
     for (const row of rows) {
       const data = coerceRow(row);
-      const fields = {};
-      for (const f of Object.values(HEADER_TO_FIELD).filter((v, i, a) => a.indexOf(v) === i)) {
+      const fields = { user_id: req.session.userId };
+      for (const f of importFields) {
         fields[f] = f in data ? data[f] : null;
       }
       if (!fields.player_or_character && !fields.set_name) continue;
@@ -81,7 +82,7 @@ router.post('/csv', express.text({ type: '*/*', limit: '10mb' }), (req, res) => 
   const headers = parseCsvLine(lines[0]);
   const fieldNames = Object.values(HEADER_TO_FIELD).filter((v, i, a) => a.indexOf(v) === i);
   const insertStmt = db.prepare(`
-    INSERT INTO cards (${fieldNames.join(',')}) VALUES (${fieldNames.map(f => '@' + f).join(',')})
+    INSERT INTO cards (user_id, ${fieldNames.join(',')}) VALUES (@user_id, ${fieldNames.map(f => '@' + f).join(',')})
   `);
 
   let inserted = 0;
@@ -94,7 +95,7 @@ router.post('/csv', express.text({ type: '*/*', limit: '10mb' }), (req, res) => 
         if (field) raw[field] = values[idx];
       });
       const data = coerceRow(raw);
-      const fields = {};
+      const fields = { user_id: req.session.userId };
       for (const f of fieldNames) fields[f] = f in data ? data[f] : null;
       if (!fields.player_or_character && !fields.set_name) continue;
       insertStmt.run(fields);
@@ -156,7 +157,7 @@ router.post('/custom', upload.single('file'), async (req, res) => {
     const { headers, rows } = await parseAnySpreadsheet(req.file);
     const usedFields = [...new Set(Object.values(columnToField).filter(Boolean))];
     if (!usedFields.length) return res.status(400).json({ error: 'map at least one column' });
-    const insertStmt = db.prepare(`INSERT INTO cards (${usedFields.join(',')}) VALUES (${usedFields.map((f) => '@' + f).join(',')})`);
+    const insertStmt = db.prepare(`INSERT INTO cards (user_id, ${usedFields.join(',')}) VALUES (@user_id, ${usedFields.map((f) => '@' + f).join(',')})`);
 
     let inserted = 0;
     const tx = db.transaction(() => {
@@ -167,7 +168,7 @@ router.post('/custom', upload.single('file'), async (req, res) => {
           raw[field] = row[Number(colIndex)];
         }
         const data = coerceRow(raw);
-        const fields = {};
+        const fields = { user_id: req.session.userId };
         for (const f of usedFields) fields[f] = f in data ? data[f] : null;
         if (!fields.player_or_character && !fields.set_name) continue;
         insertStmt.run(fields);

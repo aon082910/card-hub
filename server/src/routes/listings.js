@@ -10,18 +10,27 @@ const router = express.Router();
 // Other platforms (WhatNot, COMC, Facebook...) remain tracking-only; there's no public
 // listing-creation API for most of them.
 
+function ownedListing(id, userId) {
+  return db.prepare(`
+    SELECT l.* FROM listings l JOIN cards c ON c.id = l.card_id WHERE l.id = ? AND c.user_id = ?
+  `).get(id, userId);
+}
+
 router.get('/', (req, res) => {
   const rows = db.prepare(`
     SELECT l.*, c.player_or_character, c.team_or_set, c.set_name, c.year, c.category
     FROM listings l JOIN cards c ON c.id = l.card_id
+    WHERE c.user_id = ?
     ORDER BY l.created_at DESC
-  `).all();
+  `).all(req.session.userId);
   res.json(rows);
 });
 
 router.post('/', (req, res) => {
   const { card_id, platform, list_price, status = 'draft', external_url, external_id, listed_at, notes } = req.body;
   if (!card_id || !platform) return res.status(400).json({ error: 'card_id and platform required' });
+  const card = db.prepare('SELECT id FROM cards WHERE id = ? AND user_id = ?').get(card_id, req.session.userId);
+  if (!card) return res.status(404).json({ error: 'card not found' });
   const info = db.prepare(`
     INSERT INTO listings (card_id, platform, list_price, status, external_url, external_id, listed_at, notes)
     VALUES (@card_id, @platform, @list_price, @status, @external_url, @external_id, @listed_at, @notes)
@@ -31,7 +40,7 @@ router.post('/', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+  const existing = ownedListing(req.params.id, req.session.userId);
   if (!existing) return res.status(404).json({ error: 'not found' });
   const fields = ['platform', 'list_price', 'status', 'external_url', 'external_id', 'listed_at', 'notes'];
   const data = {};
@@ -45,13 +54,14 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
+  if (!ownedListing(req.params.id, req.session.userId)) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM listings WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
 
 // Pushes an existing eBay-platform listing record live via the Sell Inventory API.
 router.post('/:id/push-ebay', async (req, res) => {
-  const listing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+  const listing = ownedListing(req.params.id, req.session.userId);
   if (!listing) return res.status(404).json({ error: 'not found' });
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(listing.card_id);
   if (!card) return res.status(404).json({ error: 'card not found' });
@@ -74,7 +84,7 @@ router.post('/:id/push-ebay', async (req, res) => {
 
 // Refreshes a live eBay listing's status (checks for a sale via the Fulfillment API).
 router.post('/:id/sync-ebay', async (req, res) => {
-  const listing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+  const listing = ownedListing(req.params.id, req.session.userId);
   if (!listing) return res.status(404).json({ error: 'not found' });
   if (!listing.ebay_offer_id) return res.status(400).json({ error: 'this listing was not pushed to eBay yet' });
 

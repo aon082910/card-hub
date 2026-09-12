@@ -12,6 +12,12 @@ function actor(req) {
   return { userId: user ? user.id : null, username: user ? user.username : null };
 }
 
+// Every card belongs to exactly one account - fetch-and-check-owner is used everywhere
+// below instead of a plain SELECT, so one user's card ids never resolve against another's.
+function ownedCard(id, userId) {
+  return db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(id, userId);
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, IMAGES_DIR),
@@ -42,8 +48,8 @@ function pickCardFields(body) {
 // List cards with search/filter
 router.get('/', (req, res) => {
   const { q, category, status, sort = 'updated_at', dir = 'desc', limit = 500, offset = 0 } = req.query;
-  const where = [];
-  const params = {};
+  const where = ['user_id = @userId'];
+  const params = { userId: req.session.userId };
   if (q) {
     where.push(`(player_or_character LIKE @q OR team_or_set LIKE @q OR set_name LIKE @q OR sport_or_game LIKE @q OR notes LIKE @q OR tags LIKE @q)`);
     params.q = `%${q}%`;
@@ -53,11 +59,11 @@ router.get('/', (req, res) => {
   const allowedSort = new Set(['updated_at', 'created_at', 'current_value', 'cost_basis', 'year', 'player_or_character']);
   const sortCol = allowedSort.has(sort) ? sort : 'updated_at';
   const sortDir = dir === 'asc' ? 'ASC' : 'DESC';
-  const sql = `SELECT * FROM cards ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${sortCol} ${sortDir} LIMIT @limit OFFSET @offset`;
+  const sql = `SELECT * FROM cards WHERE ${where.join(' AND ')} ORDER BY ${sortCol} ${sortDir} LIMIT @limit OFFSET @offset`;
   params.limit = Number(limit);
   params.offset = Number(offset);
   const rows = db.prepare(sql).all(params);
-  const countSql = `SELECT COUNT(*) as total FROM cards ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`;
+  const countSql = `SELECT COUNT(*) as total FROM cards WHERE ${where.join(' AND ')}`;
   const { total } = db.prepare(countSql).get(params);
   res.json({ rows, total });
 });
@@ -67,8 +73,8 @@ router.get('/', (req, res) => {
 router.get('/check-duplicate', (req, res) => {
   const { set_name, card_number, year, player_or_character } = req.query;
   if (!set_name && !player_or_character) return res.json([]);
-  const where = [`status != 'sold'`];
-  const params = {};
+  const where = [`status != 'sold'`, 'user_id = @userId'];
+  const params = { userId: req.session.userId };
   if (set_name) { where.push('set_name = @set_name'); params.set_name = set_name; }
   if (card_number) { where.push('card_number = @card_number'); params.card_number = card_number; }
   if (year) { where.push('year = @year'); params.year = year; }
@@ -83,7 +89,7 @@ router.get('/check-duplicate', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = ownedCard(req.params.id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'not found' });
   const images = db.prepare('SELECT * FROM card_images WHERE card_id = ? ORDER BY id').all(req.params.id);
   const values = db.prepare('SELECT * FROM value_history WHERE card_id = ? ORDER BY recorded_at').all(req.params.id);
@@ -93,21 +99,22 @@ router.get('/:id', (req, res) => {
 });
 
 router.get('/:id/similar', (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = ownedCard(req.params.id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'not found' });
   const rows = db.prepare(`
     SELECT * FROM cards
-    WHERE id != @id AND (
+    WHERE id != @id AND user_id = @userId AND (
       (player_or_character IS NOT NULL AND player_or_character = @player) OR
       (set_name IS NOT NULL AND set_name = @set_name AND year = @year AND manufacturer = @manufacturer)
     )
     ORDER BY updated_at DESC LIMIT 20
-  `).all({ id: card.id, player: card.player_or_character, set_name: card.set_name, year: card.year, manufacturer: card.manufacturer });
+  `).all({ id: card.id, userId: req.session.userId, player: card.player_or_character, set_name: card.set_name, year: card.year, manufacturer: card.manufacturer });
   res.json(rows);
 });
 
 router.post('/', (req, res) => {
   const data = pickCardFields(req.body);
+  data.user_id = req.session.userId;
   const cols = Object.keys(data);
   if (cols.length === 0) return res.status(400).json({ error: 'no fields' });
   const sql = `INSERT INTO cards (${cols.join(',')}) VALUES (${cols.map(c => '@' + c).join(',')})`;
@@ -125,29 +132,34 @@ router.post('/', (req, res) => {
 router.post('/bulk', (req, res) => {
   const { ids, action, value } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' });
+  // Only ever act on ids the caller actually owns, regardless of what was sent.
   const placeholders = ids.map(() => '?').join(',');
+  const owned = db.prepare(`SELECT id FROM cards WHERE id IN (${placeholders}) AND user_id = ?`).all(...ids, req.session.userId);
+  const ownedIds = owned.map((r) => r.id);
+  if (ownedIds.length === 0) return res.json({ affected: 0 });
+  const ownedPlaceholders = ownedIds.map(() => '?').join(',');
 
   if (action === 'delete') {
-    const images = db.prepare(`SELECT * FROM card_images WHERE card_id IN (${placeholders})`).all(...ids);
+    const images = db.prepare(`SELECT * FROM card_images WHERE card_id IN (${ownedPlaceholders})`).all(...ownedIds);
     for (const img of images) {
       const p = path.join(IMAGES_DIR, img.filename);
       if (fs.existsSync(p)) fs.unlinkSync(p);
     }
-    db.prepare(`DELETE FROM cards WHERE id IN (${placeholders})`).run(...ids);
-    logAudit({ ...actor(req), action: 'delete', entityType: 'card', details: `bulk delete: ${ids.join(',')}` });
-    return res.json({ affected: ids.length });
+    db.prepare(`DELETE FROM cards WHERE id IN (${ownedPlaceholders})`).run(...ownedIds);
+    logAudit({ ...actor(req), action: 'delete', entityType: 'card', details: `bulk delete: ${ownedIds.join(',')}` });
+    return res.json({ affected: ownedIds.length });
   }
 
   if (action === 'set_status') {
     if (!value) return res.status(400).json({ error: 'value required for set_status' });
-    db.prepare(`UPDATE cards SET status = ?, updated_at = datetime('now') WHERE id IN (${placeholders})`).run(value, ...ids);
-    logAudit({ ...actor(req), action: 'update', entityType: 'card', details: `bulk status=${value}: ${ids.join(',')}` });
-    return res.json({ affected: ids.length });
+    db.prepare(`UPDATE cards SET status = ?, updated_at = datetime('now') WHERE id IN (${ownedPlaceholders})`).run(value, ...ownedIds);
+    logAudit({ ...actor(req), action: 'update', entityType: 'card', details: `bulk status=${value}: ${ownedIds.join(',')}` });
+    return res.json({ affected: ownedIds.length });
   }
 
   if (action === 'add_tag') {
     if (!value) return res.status(400).json({ error: 'value required for add_tag' });
-    const rows = db.prepare(`SELECT id, tags FROM cards WHERE id IN (${placeholders})`).all(...ids);
+    const rows = db.prepare(`SELECT id, tags FROM cards WHERE id IN (${ownedPlaceholders})`).all(...ownedIds);
     const upd = db.prepare(`UPDATE cards SET tags = ?, updated_at = datetime('now') WHERE id = ?`);
     const tx = db.transaction((rows) => {
       for (const r of rows) {
@@ -157,7 +169,7 @@ router.post('/bulk', (req, res) => {
       }
     });
     tx(rows);
-    logAudit({ ...actor(req), action: 'update', entityType: 'card', details: `bulk add_tag=${value}: ${ids.join(',')}` });
+    logAudit({ ...actor(req), action: 'update', entityType: 'card', details: `bulk add_tag=${value}: ${ownedIds.join(',')}` });
     return res.json({ affected: rows.length });
   }
 
@@ -165,9 +177,10 @@ router.post('/bulk', (req, res) => {
 });
 
 router.post('/:id/clone', (req, res) => {
-  const existing = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const existing = ownedCard(req.params.id, req.session.userId);
   if (!existing) return res.status(404).json({ error: 'not found' });
   const data = pickCardFields(existing);
+  data.user_id = req.session.userId;
   const cols = Object.keys(data);
   const sql = `INSERT INTO cards (${cols.join(',')}) VALUES (${cols.map(c => '@' + c).join(',')})`;
   const info = db.prepare(sql).run(data);
@@ -180,7 +193,7 @@ router.put('/:id', (req, res) => {
   const data = pickCardFields(req.body);
   const cols = Object.keys(data);
   if (cols.length === 0) return res.status(400).json({ error: 'no fields' });
-  const existing = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const existing = ownedCard(req.params.id, req.session.userId);
   if (!existing) return res.status(404).json({ error: 'not found' });
   const sql = `UPDATE cards SET ${cols.map(c => `${c} = @${c}`).join(',')}, updated_at = datetime('now') WHERE id = @id`;
   db.prepare(sql).run({ ...data, id: req.params.id });
@@ -197,6 +210,8 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
+  const existing = ownedCard(req.params.id, req.session.userId);
+  if (!existing) return res.status(404).json({ error: 'not found' });
   const images = db.prepare('SELECT * FROM card_images WHERE card_id = ?').all(req.params.id);
   for (const img of images) {
     const p = path.join(IMAGES_DIR, img.filename);
@@ -209,7 +224,7 @@ router.delete('/:id', (req, res) => {
 
 // Image upload (from USB webcam capture or phone camera - both send a JPEG blob from the browser)
 router.post('/:id/images', upload.single('image'), (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = ownedCard(req.params.id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'not found' });
   if (!req.file) return res.status(400).json({ error: 'no image' });
   const side = req.body.side === 'back' ? 'back' : (req.body.side === 'other' ? 'other' : 'front');
@@ -222,7 +237,7 @@ router.post('/:id/images', upload.single('image'), (req, res) => {
 // Pulls an image from an external URL (e.g. a card lookup result) server-side and
 // attaches it like an upload - avoids CORS issues fetching third-party images from the browser.
 router.post('/:id/import-image', async (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = ownedCard(req.params.id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'not found' });
   const { url, side = 'front' } = req.body;
   if (!url) return res.status(400).json({ error: 'url required' });
@@ -243,7 +258,7 @@ router.post('/:id/import-image', async (req, res) => {
 });
 
 router.post('/:id/refresh-value', async (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = ownedCard(req.params.id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'not found' });
   try {
     const value = await lookupPrice(card);
@@ -256,6 +271,8 @@ router.post('/:id/refresh-value', async (req, res) => {
 });
 
 router.delete('/:id/images/:imageId', (req, res) => {
+  const card = ownedCard(req.params.id, req.session.userId);
+  if (!card) return res.status(404).json({ error: 'not found' });
   const img = db.prepare('SELECT * FROM card_images WHERE id = ? AND card_id = ?').get(req.params.imageId, req.params.id);
   if (!img) return res.status(404).json({ error: 'not found' });
   const p = path.join(IMAGES_DIR, img.filename);

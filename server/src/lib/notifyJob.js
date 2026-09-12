@@ -17,23 +17,29 @@ async function sendWebhook(text) {
 
 async function buildDigestLines() {
   const lines = [];
+  // Notifications are one instance-wide, admin-configured webhook (not per-account), so a
+  // multi-tenant digest covers every user's watches/submissions, labeled by username, rather
+  // than needing separate per-account webhook settings.
+  const users = db.prepare('SELECT id, username FROM users').all();
 
   if (getSetting('notify_watches_enabled', true)) {
     const clientId = getSetting('ebay_client_id');
     const clientSecret = getSetting('ebay_client_secret');
     if (clientId && clientSecret) {
-      const watches = db.prepare('SELECT * FROM ebay_watches').all();
-      for (const w of watches) {
-        try {
-          const { items } = await ebaySearchActiveListings(w.query, clientId, clientSecret);
-          const matches = w.target_price ? items.filter((i) => i.price != null && i.price <= w.target_price) : items;
-          db.prepare(`UPDATE ebay_watches SET last_checked_at = datetime('now'), last_result_count = ? WHERE id = ?`)
-            .run(matches.length, w.id);
-          if (matches.length > 0) {
-            lines.push(`eBay watch "${w.query}": ${matches.length} listing(s) at/under $${w.target_price ?? '(any price)'}`);
+      for (const user of users) {
+        const watches = db.prepare('SELECT * FROM ebay_watches WHERE user_id = ?').all(user.id);
+        for (const w of watches) {
+          try {
+            const { items } = await ebaySearchActiveListings(w.query, clientId, clientSecret);
+            const matches = w.target_price ? items.filter((i) => i.price != null && i.price <= w.target_price) : items;
+            db.prepare(`UPDATE ebay_watches SET last_checked_at = datetime('now'), last_result_count = ? WHERE id = ?`)
+              .run(matches.length, w.id);
+            if (matches.length > 0) {
+              lines.push(`[${user.username}] eBay watch "${w.query}": ${matches.length} listing(s) at/under $${w.target_price ?? '(any price)'}`);
+            }
+          } catch {
+            // One watch failing (bad query, rate limit) shouldn't block the rest of the digest.
           }
-        } catch {
-          // One watch failing (bad query, rate limit) shouldn't block the rest of the digest.
         }
       }
     }
@@ -42,12 +48,13 @@ async function buildDigestLines() {
   if (getSetting('notify_grading_enabled', true)) {
     const today = new Date().toISOString().slice(0, 10);
     const overdue = db.prepare(`
-      SELECT g.*, c.player_or_character, c.set_name FROM grading_submissions g
+      SELECT g.*, c.player_or_character, c.set_name, u.username FROM grading_submissions g
       JOIN cards c ON c.id = g.card_id
+      JOIN users u ON u.id = c.user_id
       WHERE g.status IN ('submitted', 'in_progress') AND g.expected_return_date IS NOT NULL AND g.expected_return_date <= ?
     `).all(today);
     for (const g of overdue) {
-      lines.push(`Grading: ${g.player_or_character || g.set_name} (${g.company}) was expected back ${g.expected_return_date}`);
+      lines.push(`[${g.username}] Grading: ${g.player_or_character || g.set_name} (${g.company}) was expected back ${g.expected_return_date}`);
     }
   }
 

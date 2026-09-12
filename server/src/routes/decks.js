@@ -3,8 +3,12 @@ const { db, logAudit } = require('../db');
 
 const router = express.Router();
 
+function ownedDeck(id, userId) {
+  return db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(id, userId);
+}
+
 router.get('/', (req, res) => {
-  const decks = db.prepare('SELECT * FROM decks ORDER BY updated_at DESC').all();
+  const decks = db.prepare('SELECT * FROM decks WHERE user_id = ? ORDER BY updated_at DESC').all(req.session.userId);
   const withCounts = decks.map((d) => {
     const { n } = db.prepare('SELECT COALESCE(SUM(quantity),0) as n FROM deck_cards WHERE deck_id = ?').get(d.id);
     return { ...d, card_count: n };
@@ -13,7 +17,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  const deck = db.prepare('SELECT * FROM decks WHERE id = ?').get(req.params.id);
+  const deck = ownedDeck(req.params.id, req.session.userId);
   if (!deck) return res.status(404).json({ error: 'not found' });
   const cards = db.prepare(`
     SELECT dc.id as deck_card_id, dc.quantity as deck_quantity, c.*
@@ -26,13 +30,14 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const { name, category = 'tcg', sport_or_game, notes } = req.body;
   if (!name) return res.status(400).json({ error: 'name required' });
-  const info = db.prepare('INSERT INTO decks (name, category, sport_or_game, notes) VALUES (?, ?, ?, ?)')
-    .run(name, category, sport_or_game, notes);
-  logAudit({ action: 'create', entityType: 'deck', entityId: info.lastInsertRowid, details: name });
+  const info = db.prepare('INSERT INTO decks (user_id, name, category, sport_or_game, notes) VALUES (?, ?, ?, ?, ?)')
+    .run(req.session.userId, name, category, sport_or_game, notes);
+  logAudit({ userId: req.session.userId, action: 'create', entityType: 'deck', entityId: info.lastInsertRowid, details: name });
   res.status(201).json(db.prepare('SELECT * FROM decks WHERE id = ?').get(info.lastInsertRowid));
 });
 
 router.put('/:id', (req, res) => {
+  if (!ownedDeck(req.params.id, req.session.userId)) return res.status(404).json({ error: 'not found' });
   const fields = ['name', 'category', 'sport_or_game', 'notes'];
   const data = {};
   for (const f of fields) if (f in req.body) data[f] = req.body[f];
@@ -44,15 +49,18 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
+  if (!ownedDeck(req.params.id, req.session.userId)) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM decks WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
 
 router.post('/:id/cards', (req, res) => {
-  const deck = db.prepare('SELECT * FROM decks WHERE id = ?').get(req.params.id);
+  const deck = ownedDeck(req.params.id, req.session.userId);
   if (!deck) return res.status(404).json({ error: 'not found' });
   const { card_id, quantity = 1 } = req.body;
   if (!card_id) return res.status(400).json({ error: 'card_id required' });
+  const card = db.prepare('SELECT id FROM cards WHERE id = ? AND user_id = ?').get(card_id, req.session.userId);
+  if (!card) return res.status(404).json({ error: 'card not found' });
   const existing = db.prepare('SELECT * FROM deck_cards WHERE deck_id = ? AND card_id = ?').get(req.params.id, card_id);
   if (existing) {
     db.prepare('UPDATE deck_cards SET quantity = quantity + ? WHERE id = ?').run(quantity, existing.id);
@@ -64,6 +72,7 @@ router.post('/:id/cards', (req, res) => {
 });
 
 router.delete('/:id/cards/:deckCardId', (req, res) => {
+  if (!ownedDeck(req.params.id, req.session.userId)) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM deck_cards WHERE id = ? AND deck_id = ?').run(req.params.deckCardId, req.params.id);
   res.status(204).end();
 });

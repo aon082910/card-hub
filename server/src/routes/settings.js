@@ -12,7 +12,7 @@ const SECRET_KEYS = new Set([
 ]);
 
 const PUBLIC_KEYS = [
-  'site_title', 'default_theme', 'snapshot_enabled', 'snapshot_hour',
+  'site_title', 'default_theme', 'registration_enabled', 'snapshot_enabled', 'snapshot_hour',
   'backup_enabled', 'backup_hour', 'backup_retention',
   'notify_enabled', 'notify_hour', 'notify_webhook_url', 'notify_watches_enabled', 'notify_grading_enabled',
   'price_provider', 'pokewallet_api_key',

@@ -7,15 +7,16 @@ router.get('/', (req, res) => {
   const rows = db.prepare(`
     SELECT s.*, c.player_or_character, c.team_or_set, c.set_name, c.year, c.category
     FROM sales s JOIN cards c ON c.id = s.card_id
+    WHERE c.user_id = ?
     ORDER BY s.sale_date DESC, s.id DESC
-  `).all();
+  `).all(req.session.userId);
   res.json(rows);
 });
 
 router.post('/', (req, res) => {
   const { card_id, quantity_sold = 1, sale_price, fees = 0, shipping_cost = 0, platform, buyer, sale_date, notes } = req.body;
   if (!card_id || sale_price === undefined) return res.status(400).json({ error: 'card_id and sale_price required' });
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(card_id);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(card_id, req.session.userId);
   if (!card) return res.status(404).json({ error: 'card not found' });
 
   const info = db.prepare(`
@@ -32,6 +33,10 @@ router.post('/', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
+  const owned = db.prepare(`
+    SELECT s.id FROM sales s JOIN cards c ON c.id = s.card_id WHERE s.id = ? AND c.user_id = ?
+  `).get(req.params.id, req.session.userId);
+  if (!owned) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM sales WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });

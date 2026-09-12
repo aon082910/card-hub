@@ -7,6 +7,8 @@ Image: [hub.docker.com/r/allornothing/card-hub](https://hub.docker.com/r/allorno
 
 A self-hosted trading card / sports card collection manager modeled after [Ludex](https://www.ludex.com/), built to run on Docker / Unraid with a local SQLite database and no cloud dependency. Built independently as its own implementation; no Ludex code, assets, or branding are used.
 
+**Multi-tenant**: every account is self-registered from the login page and gets its own private collection — Card-Hub is meant to be hosted centrally (one server, many users), not just a single-household shared instance. See **Accounts & community** below for friends, messaging, and trading between accounts on the same server.
+
 ## Features
 
 **Collection management**
@@ -97,10 +99,12 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 - Re-import an exported (or edited) Excel/CSV file to bulk-add cards.
 - **Import from another app** (Reports → Import From Another App): [TCDB](https://www.tcdb.com/), [CollX](https://collx.app/), [Slabfy](https://slabfy.com/), [ManaBox](https://manabox.app/), and [Eyevo](https://eyevotcg.com/) don't publish a public developer API, so there's no automatic sync for them (verified directly against each site — none document API access as of this writing). If one of them can export your collection to CSV/Excel, upload it here and map its columns to Card-Hub's fields yourself — no fixed format assumed.
 
-**Multi-user & activity**
-- Simple login (session-based). A default admin account is created on first run — see below.
-- Admins can add/remove additional user accounts.
-- Every create/update/delete is recorded to an activity/audit log (Settings → Activity Log), including who did it.
+**Accounts & community**
+- Multi-tenant: anyone can create their own account from the login page (Settings → Users → "Allow self-registration" to turn this off), and every account's collection, decks, sets, watches, etc. are private to that account. A default admin account is created on first run — see below. Admins can also add/remove accounts directly and see every account's activity in the audit log.
+- **Friends**: search for another account by username and send a friend request (Friends page); once accepted, you can message each other and see each other's collection.
+- **Messages**: a simple inbox per friend, with an unread-count badge in the nav.
+- **Trade requests**: from a friend's collection page, check cards of theirs you want and cards of yours to offer, add a note, and send a trade proposal — it lands as a message they can accept or decline. Once accepted, either side can mark it "Completed," which transfers ownership of the agreed cards between the two collections.
+- Every create/update/delete is recorded to an activity/audit log (Settings → Activity Log, admin-only), including who did it.
 
 **Automated backups** (admin-only, Settings → Automated Backups)
 - Daily database backup using SQLite's online backup API (safe to run while the app is in use, unlike copying the `.db` file directly), with configurable time-of-day and how many backups to keep — plus a "Take Backup Now" button.

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { useLanguage, LANGUAGES } from '../i18n.jsx';
+import { api } from '../api.js';
 
 function getInitialTheme() {
   try {
@@ -15,11 +16,20 @@ export default function Nav() {
   const { user, logout } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const [theme, setTheme] = useState(getInitialTheme);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem('card-hub-theme', theme); } catch { /* ignore */ }
   }, [theme]);
+
+  useEffect(() => {
+    if (!user) return;
+    const check = () => api.unreadMessageCount().then((r) => setUnread(r.count)).catch(() => {});
+    check();
+    const id = setInterval(check, 30000);
+    return () => clearInterval(id);
+  }, [user]);
 
   return (
     <header className="nav">
@@ -37,6 +47,8 @@ export default function Nav() {
         <NavLink to="/listings">{t('nav_listings')}</NavLink>
         <NavLink to="/watches">{t('nav_watches')}</NavLink>
         <NavLink to="/trade-match">{t('nav_trade_match')}</NavLink>
+        <NavLink to="/friends">Friends</NavLink>
+        <NavLink to="/messages">Messages{unread > 0 ? ` (${unread})` : ''}</NavLink>
         <NavLink to="/sets">{t('nav_sets')}</NavLink>
         <NavLink to="/reports">{t('nav_reports')}</NavLink>
         <NavLink to="/settings">{t('nav_settings')}</NavLink>

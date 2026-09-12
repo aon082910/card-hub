@@ -1,8 +1,29 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, logAudit } = require('../db');
+const { db, getSetting, logAudit } = require('../db');
 
 const router = express.Router();
+
+// Public self-registration - every account gets its own private collection (Card-Hub is
+// multi-tenant). Disable via Settings if this instance shouldn't accept new signups.
+router.post('/register', (req, res) => {
+  if (!getSetting('registration_enabled', true)) {
+    return res.status(403).json({ error: 'Registration is currently disabled on this server.' });
+  }
+  const { username, password } = req.body;
+  if (!username || username.trim().length < 3) return res.status(400).json({ error: 'username must be at least 3 characters' });
+  if (!password || password.length < 4) return res.status(400).json({ error: 'password must be at least 4 characters' });
+  const hash = bcrypt.hashSync(password, 10);
+  try {
+    const info = db.prepare('INSERT INTO users (username, password_hash, role, must_change_password) VALUES (?, ?, ?, 0)')
+      .run(username.trim(), hash, 'member');
+    req.session.userId = info.lastInsertRowid;
+    logAudit({ userId: info.lastInsertRowid, username: username.trim(), action: 'create', entityType: 'user', entityId: info.lastInsertRowid, details: 'self-registered' });
+    res.status(201).json({ id: info.lastInsertRowid, username: username.trim(), role: 'member', must_change_password: false });
+  } catch {
+    res.status(400).json({ error: 'That username is already taken.' });
+  }
+});
 
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
@@ -38,6 +59,17 @@ router.post('/change-password', (req, res) => {
   const hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hash, user.id);
   res.status(204).end();
+});
+
+// Lets any logged-in user find other accounts to friend - deliberately minimal fields
+// (just id/username), unlike the admin-only full user list below.
+router.get('/users/search', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'not logged in' });
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  const rows = db.prepare('SELECT id, username FROM users WHERE username LIKE ? AND id != ? ORDER BY username LIMIT 20')
+    .all(`%${q}%`, req.session.userId);
+  res.json(rows);
 });
 
 // User management (admin only)

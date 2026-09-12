@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { useLanguage } from '../i18n.jsx';
 
@@ -37,6 +38,7 @@ export default function Login() {
         </label>
         <button className="btn primary" type="submit" disabled={busy}>{busy ? t('login_signing_in') : t('login_sign_in')}</button>
         <p className="hint-text">{t('login_first_time')} <strong>admin</strong> / <strong>admin</strong> {t('login_change_after')}</p>
+        <p className="hint-text">New here? <Link to="/register">Create an account</Link></p>
       </form>
     </div>
   );

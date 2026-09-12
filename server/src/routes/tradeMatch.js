@@ -48,10 +48,10 @@ router.post('/', async (req, res) => {
   let ourCards;
   let direction;
   if (theirData.kind === 'wanted') {
-    ourCards = db.prepare(`SELECT * FROM cards WHERE for_trade = 1 AND status != 'sold'`).all();
+    ourCards = db.prepare(`SELECT * FROM cards WHERE for_trade = 1 AND status != 'sold' AND user_id = ?`).all(req.session.userId);
     direction = 'you_have_what_they_want';
   } else {
-    ourCards = db.prepare(`SELECT * FROM cards WHERE status = 'wanted'`).all();
+    ourCards = db.prepare(`SELECT * FROM cards WHERE status = 'wanted' AND user_id = ?`).all(req.session.userId);
     direction = 'they_have_what_you_want';
   }
 

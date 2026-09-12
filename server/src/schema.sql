@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS cards (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- owner - every card belongs to exactly one account
   category TEXT NOT NULL DEFAULT 'sports',     -- sports | tcg | other
   sport_or_game TEXT,                          -- e.g. Basketball, Pokemon, Magic: The Gathering
   player_or_character TEXT,
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE TABLE IF NOT EXISTS card_sets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'sports',
   sport_or_game TEXT,
@@ -124,6 +126,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   total_value REAL NOT NULL,
   total_cost REAL NOT NULL,
   card_count INTEGER NOT NULL,
@@ -149,6 +152,7 @@ CREATE TABLE IF NOT EXISTS grading_submissions (
 
 CREATE TABLE IF NOT EXISTS decks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'tcg',
   sport_or_game TEXT,
@@ -199,6 +203,7 @@ CREATE TABLE IF NOT EXISTS api_tokens (
 
 CREATE TABLE IF NOT EXISTS ebay_watches (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   query TEXT NOT NULL,
   target_price REAL,
   notes TEXT,
@@ -207,7 +212,47 @@ CREATE TABLE IF NOT EXISTS ebay_watches (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS friendships (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  addressee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',          -- pending | accepted | declined
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  responded_at TEXT,
+  UNIQUE(requester_id, addressee_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  trade_request_id INTEGER REFERENCES trade_requests(id) ON DELETE SET NULL,
+  read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS trade_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',          -- pending | accepted | declined | cancelled | completed
+  offered_card_ids TEXT,                           -- JSON array of the requester's card ids
+  requested_card_ids TEXT,                         -- JSON array of the recipient's card ids
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  responded_at TEXT,
+  completed_at TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_cards_category ON cards(category);
+CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id);
+CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id);
+CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_trade_requests_recipient ON trade_requests(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_trade_requests_requester ON trade_requests(requester_id);
 CREATE INDEX IF NOT EXISTS idx_cards_status ON cards(status);
 CREATE INDEX IF NOT EXISTS idx_card_images_card ON card_images(card_id);
 CREATE INDEX IF NOT EXISTS idx_value_history_card ON value_history(card_id);

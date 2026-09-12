@@ -45,6 +45,9 @@ app.use('/api/watches', requireAuth, require('./routes/watches'));
 app.use('/api/backups', requireAuth, require('./routes/backups'));
 app.use('/api/api-tokens', requireAuth, require('./routes/apiTokens'));
 app.use('/api/trade-match', requireAuth, require('./routes/tradeMatch'));
+app.use('/api/friends', requireAuth, require('./routes/friends'));
+app.use('/api/messages', requireAuth, require('./routes/messages'));
+app.use('/api/trade-requests', requireAuth, require('./routes/tradeRequests'));
 
 // Not auth-gated: this is what a public share link resolves to (opted into by an admin/member
 // generating the link), and share pages need to display the referenced card images.

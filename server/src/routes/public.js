@@ -14,19 +14,21 @@ router.get('/share/:token', (req, res) => {
     manufacturer, card_number, parallel_variant, rarity, is_graded, grading_company, grade,
     raw_condition, current_value, status`;
 
+  // Every card belongs to one account now (Card-Hub is multi-tenant) - a link only ever
+  // resolves against its creator's own cards, never the whole instance.
   let cards;
   if (link.kind === 'wanted') {
-    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE status = 'wanted' ORDER BY player_or_character`).all();
+    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE status = 'wanted' AND user_id = ? ORDER BY player_or_character`).all(link.created_by);
   } else if (link.kind === 'for_trade') {
-    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE for_trade = 1 AND status != 'sold' ORDER BY player_or_character`).all();
+    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE for_trade = 1 AND status != 'sold' AND user_id = ? ORDER BY player_or_character`).all(link.created_by);
   } else if (link.kind === 'collection') {
-    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE status != 'sold' ORDER BY player_or_character`).all();
+    cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE status != 'sold' AND user_id = ? ORDER BY player_or_character`).all(link.created_by);
   } else {
     const ids = JSON.parse(link.card_ids || '[]');
     if (!ids.length) cards = [];
     else {
       const placeholders = ids.map(() => '?').join(',');
-      cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE id IN (${placeholders})`).all(...ids);
+      cards = db.prepare(`SELECT ${SAFE_FIELDS} FROM cards WHERE id IN (${placeholders}) AND user_id = ?`).all(...ids, link.created_by);
     }
   }
 

@@ -60,12 +60,34 @@ export const api = {
   auditLog: () => request('/settings/audit-log'),
 
   login: (username, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  register: (username, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
   changePassword: (currentPassword, newPassword) => request('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
   listUsers: () => request('/auth/users'),
+  searchUsers: (q) => request(`/auth/users/search?q=${encodeURIComponent(q)}`),
   createUser: (data) => request('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
   deleteUser: (id) => request(`/auth/users/${id}`, { method: 'DELETE' }),
+
+  listFriends: () => request('/friends'),
+  listFriendRequests: () => request('/friends/requests'),
+  sendFriendRequest: (username) => request('/friends', { method: 'POST', body: JSON.stringify({ username }) }),
+  acceptFriendRequest: (id) => request(`/friends/${id}/accept`, { method: 'POST' }),
+  declineFriendRequest: (id) => request(`/friends/${id}/decline`, { method: 'POST' }),
+  removeFriend: (id) => request(`/friends/${id}`, { method: 'DELETE' }),
+  friendCollection: (userId) => request(`/friends/${userId}/collection`),
+
+  listConversations: () => request('/messages/conversations'),
+  messagesWith: (userId) => request(`/messages/with/${userId}`),
+  sendMessage: (userId, body, tradeRequestId) => request(`/messages/with/${userId}`, { method: 'POST', body: JSON.stringify({ body, trade_request_id: tradeRequestId }) }),
+  unreadMessageCount: () => request('/messages/unread-count'),
+
+  listTradeRequests: () => request('/trade-requests'),
+  createTradeRequest: (data) => request('/trade-requests', { method: 'POST', body: JSON.stringify(data) }),
+  acceptTradeRequest: (id) => request(`/trade-requests/${id}/accept`, { method: 'POST' }),
+  declineTradeRequest: (id) => request(`/trade-requests/${id}/decline`, { method: 'POST' }),
+  cancelTradeRequest: (id) => request(`/trade-requests/${id}/cancel`, { method: 'POST' }),
+  completeTradeRequest: (id) => request(`/trade-requests/${id}/complete`, { method: 'POST' }),
 
   ebayConnectUrl: () => request('/oauth/ebay/connect'),
 

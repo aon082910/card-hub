@@ -199,8 +199,8 @@ export default function Settings() {
         <h2>Personal API Token</h2>
         <p className="hint-text">
           A read-only token for your own scripts/dashboards outside the browser — no login required, just an
-          Authorization header. Anyone holding a token can read (not modify) everything in the collection, so treat
-          it like a password. Example: <code>curl -H "Authorization: Bearer &lt;token&gt;" {window.location.origin}/api/v1/cards</code>
+          Authorization header. Scoped to your own account only. Anyone holding a token can read (not modify) your
+          collection, so treat it like a password. Example: <code>curl -H "Authorization: Bearer &lt;token&gt;" {window.location.origin}/api/v1/cards</code>
         </p>
         {apiTokens.length > 0 && (
           <table className="simple-table">
@@ -227,6 +227,11 @@ export default function Settings() {
       {user?.role === 'admin' && (
         <section className="panel">
           <h2>Users</h2>
+          <label className="checkbox-label" style={{ marginBottom: '0.75rem' }}>
+            <input type="checkbox" checked={settings.registration_enabled !== false} onChange={(e) => set('registration_enabled', e.target.checked)} />
+            Allow self-registration (anyone can create their own account from the login page)
+          </label>
+          <p className="hint-text" style={{ marginTop: '-0.5rem', marginBottom: '0.75rem' }}>Saved via "Save Settings" further down the page.</p>
           <table className="simple-table">
             <thead><tr><th>Username</th><th>Role</th><th></th></tr></thead>
             <tbody>

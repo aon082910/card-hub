@@ -10,23 +10,26 @@ const router = express.Router();
 // listings only, not sold comps (see priceProviders.js for why).
 
 router.get('/', (req, res) => {
-  res.json(db.prepare('SELECT * FROM ebay_watches ORDER BY created_at DESC').all());
+  res.json(db.prepare('SELECT * FROM ebay_watches WHERE user_id = ? ORDER BY created_at DESC').all(req.session.userId));
 });
 
 router.post('/', (req, res) => {
   const { query, target_price, notes } = req.body;
   if (!query) return res.status(400).json({ error: 'query required' });
-  const info = db.prepare('INSERT INTO ebay_watches (query, target_price, notes) VALUES (?, ?, ?)').run(query, target_price || null, notes || null);
+  const info = db.prepare('INSERT INTO ebay_watches (user_id, query, target_price, notes) VALUES (?, ?, ?, ?)')
+    .run(req.session.userId, query, target_price || null, notes || null);
   res.status(201).json(db.prepare('SELECT * FROM ebay_watches WHERE id = ?').get(info.lastInsertRowid));
 });
 
 router.delete('/:id', (req, res) => {
+  const owned = db.prepare('SELECT id FROM ebay_watches WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
+  if (!owned) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM ebay_watches WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
 
 router.post('/:id/check', async (req, res) => {
-  const watch = db.prepare('SELECT * FROM ebay_watches WHERE id = ?').get(req.params.id);
+  const watch = db.prepare('SELECT * FROM ebay_watches WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
   if (!watch) return res.status(404).json({ error: 'not found' });
   const clientId = getSetting('ebay_client_id');
   const clientSecret = getSetting('ebay_client_secret');

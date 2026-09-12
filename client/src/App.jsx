@@ -3,7 +3,11 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import Nav from './components/Nav.jsx';
 import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
 import SharePage from './pages/SharePage.jsx';
+import Friends from './pages/Friends.jsx';
+import Messages from './pages/Messages.jsx';
+import FriendCollection from './pages/FriendCollection.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Collection from './pages/Collection.jsx';
 import CardDetail from './pages/CardDetail.jsx';
@@ -37,7 +41,7 @@ export default function App() {
   }
 
   if (user === undefined) return <div className="loading-shell">Loading...</div>;
-  if (user === null) return <Login />;
+  if (user === null) return location.pathname === '/register' ? <Register /> : <Login />;
 
   return (
     <div className="app-shell">
@@ -53,6 +57,10 @@ export default function App() {
           <Route path="/for-trade" element={<ForTrade />} />
           <Route path="/watches" element={<Watches />} />
           <Route path="/trade-match" element={<TradeMatch />} />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/friends/:userId" element={<FriendCollection />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:userId" element={<Messages />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/trades" element={<Trades />} />
           <Route path="/listings" element={<Listings />} />

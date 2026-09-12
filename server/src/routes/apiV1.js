@@ -23,19 +23,19 @@ router.use(requireApiToken);
 
 router.get('/cards', (req, res) => {
   const { q, category, status, limit = 500, offset = 0 } = req.query;
-  const where = [];
-  const params = {};
+  const where = ['user_id = @userId'];
+  const params = { userId: req.apiUserId };
   if (q) { where.push(`(player_or_character LIKE @q OR set_name LIKE @q OR team_or_set LIKE @q)`); params.q = `%${q}%`; }
   if (category) { where.push('category = @category'); params.category = category; }
   if (status) { where.push('status = @status'); params.status = status; }
   params.limit = Number(limit);
   params.offset = Number(offset);
-  const sql = `SELECT * FROM cards ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC LIMIT @limit OFFSET @offset`;
+  const sql = `SELECT * FROM cards WHERE ${where.join(' AND ')} ORDER BY updated_at DESC LIMIT @limit OFFSET @offset`;
   res.json(db.prepare(sql).all(params));
 });
 
 router.get('/cards/:id', (req, res) => {
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.params.id, req.apiUserId);
   if (!card) return res.status(404).json({ error: 'not found' });
   res.json(card);
 });
@@ -44,8 +44,8 @@ router.get('/dashboard', (req, res) => {
   const totals = db.prepare(`
     SELECT COUNT(*) as card_lines, COALESCE(SUM(quantity), 0) as total_quantity,
       COALESCE(SUM(cost_basis), 0) as total_cost, COALESCE(SUM(current_value * quantity), 0) as total_value
-    FROM cards WHERE status != 'sold'
-  `).get();
+    FROM cards WHERE status != 'sold' AND user_id = ?
+  `).get(req.apiUserId);
   res.json(totals);
 });
 

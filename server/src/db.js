@@ -55,6 +55,12 @@ addColumnsIfMissing('listings', {
   ebay_sku: 'TEXT',
 });
 
+addColumnsIfMissing('cards', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
+addColumnsIfMissing('card_sets', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
+addColumnsIfMissing('decks', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
+addColumnsIfMissing('ebay_watches', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
+addColumnsIfMissing('portfolio_snapshots', { user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE' });
+
 // Seed a default admin account on first run so the app is usable out of the box.
 const userCount = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
 if (userCount === 0) {
@@ -62,6 +68,20 @@ if (userCount === 0) {
   db.prepare('INSERT INTO users (username, password_hash, role, must_change_password) VALUES (?, ?, ?, 1)')
     .run('admin', hash, 'admin');
   console.log('Card-Hub: created default admin account (username: admin, password: admin) - please change the password after logging in.');
+}
+
+// Card-Hub used to be a single shared collection per install. Now every card/deck/set/
+// watch/snapshot belongs to an account - anything left over from before this change
+// (user_id IS NULL) is assigned to the original admin account so nothing is orphaned.
+const firstAdmin = db.prepare(`SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1`).get();
+if (firstAdmin) {
+  for (const table of ['cards', 'card_sets', 'decks', 'ebay_watches', 'portfolio_snapshots']) {
+    const { n } = db.prepare(`SELECT COUNT(*) as n FROM ${table} WHERE user_id IS NULL`).get();
+    if (n > 0) {
+      db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL`).run(firstAdmin.id);
+      console.log(`Card-Hub: assigned ${n} pre-existing ${table} row(s) to the admin account (#${firstAdmin.id})`);
+    }
+  }
 }
 
 function getSetting(key, fallback = null) {
