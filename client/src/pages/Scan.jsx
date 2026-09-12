@@ -6,6 +6,7 @@ import { api } from '../api.js';
 const SAMPLE_W = 48;
 const SAMPLE_H = 32;
 const SETTLE_TICKS = 3; // consecutive still (low frame-to-frame diff) samples required before we snap
+const FOCUS_DELAY_MS = 350; // extra wait after the card stops moving, before the actual snapshot, so autofocus/exposure can catch up
 const REFRACTORY_MS = 600; // ignore new motion right after a capture (card settling/bouncing in the tray)
 const FLASH_MS = 450;
 const TICK_MS = 90;
@@ -85,8 +86,9 @@ export default function Scan() {
   const prevSampleRef = useRef(null);
   const backgroundSampleRef = useRef(null); // sample from just before motion started - used to isolate the card for auto-crop
   const lastCapturedSampleRef = useRef(null); // sample at the last auto-capture - used for the duplicate-shot guard
-  const machineRef = useRef('settled'); // settled (watching) | moving (card in transit)
+  const machineRef = useRef('settled'); // settled (watching) | moving (card in transit) | focusing (still, waiting for autofocus)
   const stillStreakRef = useRef(0);
+  const focusStartTimeRef = useRef(0);
   const lastCaptureTimeRef = useRef(0);
   const sideRef = useRef('front');
   const autoAlternateRef = useRef(true);
@@ -159,8 +161,11 @@ export default function Scan() {
     stopStream();
     setError(null);
     try {
+      // Ask for the sharpest feed the camera offers - without an explicit resolution,
+      // some USB webcams default to a low-res mode that looks blurry once cropped in on.
+      const resolution = { width: { ideal: 1920 }, height: { ideal: 1080 } };
       const constraints = {
-        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } },
+        video: deviceId ? { deviceId: { exact: deviceId }, ...resolution } : { facingMode: { ideal: 'environment' }, ...resolution },
         audio: false,
       };
       let stream;
@@ -169,7 +174,7 @@ export default function Scan() {
       } catch (err) {
         if (!deviceId) throw err;
         // A saved camera from a previous visit is no longer plugged in - fall back to the default.
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, ...resolution }, audio: false });
         setDeviceId(null);
       }
       streamRef.current = stream;
@@ -269,17 +274,29 @@ export default function Scan() {
       } else {
         stillStreakRef.current += 1;
         if (stillStreakRef.current >= SETTLE_TICKS) {
-          // Motion stopped - the card has landed in the tray. Snap the top card and go
-          // back to watching; no "wait for the tray to go empty" step, since it won't.
-          doCapture(true);
-          lastCaptureTimeRef.current = performance.now();
-          machineRef.current = 'settled';
-          stillStreakRef.current = 0;
-          setScanState('captured');
-          setTimeout(() => {
-            if (machineRef.current === 'settled') setScanState('empty');
-          }, FLASH_MS);
+          // Motion has stopped, but the camera's autofocus/exposure may still be
+          // catching up right after the card lands - wait a beat before actually
+          // snapping, rather than capturing the exact instant it stops moving.
+          machineRef.current = 'focusing';
+          focusStartTimeRef.current = performance.now();
         }
+      }
+    } else if (state === 'focusing') {
+      if (moving) {
+        // Something's still shifting (or a new card arrived) - go back to waiting it out.
+        machineRef.current = 'moving';
+        stillStreakRef.current = 0;
+      } else if (performance.now() - focusStartTimeRef.current >= FOCUS_DELAY_MS) {
+        // Motion stopped - the card has landed in the tray. Snap the top card and go
+        // back to watching; no "wait for the tray to go empty" step, since it won't.
+        doCapture(true);
+        lastCaptureTimeRef.current = performance.now();
+        machineRef.current = 'settled';
+        stillStreakRef.current = 0;
+        setScanState('captured');
+        setTimeout(() => {
+          if (machineRef.current === 'settled') setScanState('empty');
+        }, FLASH_MS);
       }
     }
   }
