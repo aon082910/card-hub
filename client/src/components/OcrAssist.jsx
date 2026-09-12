@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
+import { extractCardText } from '../ocr.js';
 
 const GAMES = [
   { key: 'pokemon', label: 'Pokemon', lookup: (q) => api.lookupPokemon(q) },
@@ -26,9 +27,7 @@ export default function OcrAssist({ imageUrl, onPick }) {
     setLines(null);
     setMatches(null);
     try {
-      const Tesseract = await import('tesseract.js');
-      const { data } = await Tesseract.recognize(imageUrl, 'eng');
-      const found = data.text.split('\n').map((l) => l.trim()).filter((l) => l.length > 1);
+      const found = await extractCardText(imageUrl);
       setLines(found.length ? found : ['(no text detected)']);
     } catch (e) {
       setError(e.message || 'OCR failed');
