@@ -6,6 +6,7 @@ const { IMAGES_DIR } = require('./db');
 const { requireAuth } = require('./middleware/auth');
 const { startScheduler } = require('./lib/snapshotJob');
 const { startScheduler: startBackupScheduler } = require('./lib/backupJob');
+const { startScheduler: startNotifyScheduler } = require('./lib/notifyJob');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -24,6 +25,8 @@ app.use(session({
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/oauth', require('./routes/oauth'));
 app.use('/api/public', require('./routes/public'));
+// Its own bearer-token auth, not the session cookie - see apiV1.js.
+app.use('/api/v1', require('./routes/apiV1'));
 
 app.use('/api/cards', requireAuth, require('./routes/cards'));
 app.use('/api/sales', requireAuth, require('./routes/sales'));
@@ -40,6 +43,8 @@ app.use('/api/trades', requireAuth, require('./routes/trades'));
 app.use('/api/share', requireAuth, require('./routes/share'));
 app.use('/api/watches', requireAuth, require('./routes/watches'));
 app.use('/api/backups', requireAuth, require('./routes/backups'));
+app.use('/api/api-tokens', requireAuth, require('./routes/apiTokens'));
+app.use('/api/trade-match', requireAuth, require('./routes/tradeMatch'));
 
 // Not auth-gated: this is what a public share link resolves to (opted into by an admin/member
 // generating the link), and share pages need to display the referenced card images.
@@ -56,4 +61,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Card-Hub server listening on port ${PORT}`);
   startScheduler();
   startBackupScheduler();
+  startNotifyScheduler();
 });

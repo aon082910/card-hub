@@ -36,6 +36,7 @@ export default function Nav() {
         <NavLink to="/trades">{t('nav_trades')}</NavLink>
         <NavLink to="/listings">{t('nav_listings')}</NavLink>
         <NavLink to="/watches">{t('nav_watches')}</NavLink>
+        <NavLink to="/trade-match">{t('nav_trade_match')}</NavLink>
         <NavLink to="/sets">{t('nav_sets')}</NavLink>
         <NavLink to="/reports">{t('nav_reports')}</NavLink>
         <NavLink to="/settings">{t('nav_settings')}</NavLink>

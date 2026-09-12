@@ -52,6 +52,18 @@ A self-hosted trading card / sports card collection manager modeled after [Ludex
 **eBay deal watches**
 - Save a search query + target price (Watches page); "Check Now" lists current active eBay listings under that price. Reuses the same eBay Browse API integration as the eBay price provider — needs your eBay API key, and again, active listings only (not sold comps). Approximates Slabfy's eBay-monitoring-for-deals feature.
 
+**Trade Match**
+- Paste another Card-Hub instance's public share link (their For Trade list, Want List, or collection) and see what overlaps with your own lists — if they shared a want list, you're shown what of yours (marked For Trade) matches it; otherwise you're shown what of theirs matches your Want List. Matching is by set/number/name, best-effort.
+
+**Notifications**
+- An optional daily digest posted to a webhook URL (Settings → Notifications, admin-only) — works as-is with Discord/Slack incoming webhooks or any generic receiver (ntfy.sh, Home Assistant, n8n...). No SMTP/email setup. Covers eBay watch hits and grading submissions past their expected return date. "Send Test Webhook" and "Send Digest Now" for on-demand checks.
+
+**Duplicate warning**
+- Adding a card that matches an existing entry's set + number (or player/character) warns you before creating a second row, so accidental double-entries are easier to catch — you can still proceed on purpose (e.g. a genuine second copy).
+
+**Personal API Token**
+- Settings → Personal API Token: generate a read-only bearer token for your own scripts/dashboards outside the browser (`GET /api/v1/cards`, `/api/v1/cards/:id`, `/api/v1/dashboard`). No session/cookie needed — just an `Authorization: Bearer <token>` header (or `?token=`).
+
 **Trades**
 - A simple ledger for cards traded with other collectors (no money involved) — separate from Sales, which assumes a cash transaction. Trading a card away reduces its quantity, same as a sale.
 

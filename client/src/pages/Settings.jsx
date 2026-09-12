@@ -19,9 +19,13 @@ export default function Settings() {
   const [backupMsg, setBackupMsg] = useState(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
+  const [notifyMsg, setNotifyMsg] = useState(null);
+  const [apiTokens, setApiTokens] = useState([]);
+  const [newTokenLabel, setNewTokenLabel] = useState('');
 
   function load() {
     api.getSettings().then(setSettings);
+    api.listApiTokens().then(setApiTokens).catch(() => {});
     if (user?.role === 'admin') {
       api.listUsers().then(setUsers).catch(() => {});
       api.listBackups().then(setBackups).catch(() => {});
@@ -75,6 +79,41 @@ export default function Settings() {
     if (n < 1024) return `${n} B`;
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
     return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  async function handleTestWebhook() {
+    try {
+      await api.testWebhook();
+      setNotifyMsg({ ok: true, text: 'Test notification sent — check your webhook destination.' });
+    } catch (e) {
+      setNotifyMsg({ ok: false, text: e.message });
+    } finally {
+      setTimeout(() => setNotifyMsg(null), 4000);
+    }
+  }
+
+  async function handleSendDigestNow() {
+    try {
+      const res = await api.sendDigestNow();
+      setNotifyMsg({ ok: true, text: res.lines.length ? `Digest sent (${res.lines.length} item(s)).` : 'Nothing to report right now — no digest sent.' });
+    } catch (e) {
+      setNotifyMsg({ ok: false, text: e.message });
+    } finally {
+      setTimeout(() => setNotifyMsg(null), 4000);
+    }
+  }
+
+  async function handleCreateToken(e) {
+    e.preventDefault();
+    await api.createApiToken(newTokenLabel || null);
+    setNewTokenLabel('');
+    api.listApiTokens().then(setApiTokens);
+  }
+
+  async function handleDeleteToken(id) {
+    if (!confirm('Revoke this API token? Anything using it will stop working.')) return;
+    await api.deleteApiToken(id);
+    api.listApiTokens().then(setApiTokens);
   }
 
   function set(field, value) {
@@ -153,6 +192,35 @@ export default function Settings() {
           </div>
           {pwMsg && <p className={pwMsg.ok ? 'hint-text' : 'error-text'}>{pwMsg.text}</p>}
           <button className="btn primary" type="submit">Change Password</button>
+        </form>
+      </section>
+
+      <section className="panel">
+        <h2>Personal API Token</h2>
+        <p className="hint-text">
+          A read-only token for your own scripts/dashboards outside the browser — no login required, just an
+          Authorization header. Anyone holding a token can read (not modify) everything in the collection, so treat
+          it like a password. Example: <code>curl -H "Authorization: Bearer &lt;token&gt;" {window.location.origin}/api/v1/cards</code>
+        </p>
+        {apiTokens.length > 0 && (
+          <table className="simple-table">
+            <thead><tr><th>Label</th><th>Token</th><th>Created</th><th>Last Used</th><th></th></tr></thead>
+            <tbody>
+              {apiTokens.map((tok) => (
+                <tr key={tok.id}>
+                  <td>{tok.label || '—'}</td>
+                  <td><code>{tok.token}</code></td>
+                  <td>{new Date(tok.created_at).toLocaleDateString()}</td>
+                  <td>{tok.last_used_at ? new Date(tok.last_used_at).toLocaleString() : 'Never'}</td>
+                  <td><button className="btn small danger" onClick={() => handleDeleteToken(tok.id)}>Revoke</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <form className="cta-row" onSubmit={handleCreateToken} style={{ marginTop: '0.75rem' }}>
+          <input placeholder="Label (optional, e.g. 'home dashboard')" value={newTokenLabel} onChange={(e) => setNewTokenLabel(e.target.value)} />
+          <button className="btn" type="submit">Generate Token</button>
         </form>
       </section>
 
@@ -323,6 +391,43 @@ export default function Settings() {
             <input type="file" accept=".db" onChange={(e) => setRestoreFile(e.target.files[0] || null)} />
             <button className="btn" disabled={!restoreFile} onClick={handleRestoreUpload}>Restore From Uploaded File</button>
           </div>
+        </section>
+      )}
+
+      {user?.role === 'admin' && (
+        <section className="panel">
+          <h2>Notifications</h2>
+          <p className="hint-text">
+            A daily digest posted to a webhook URL — works as-is with Discord and Slack incoming webhooks, or any
+            generic receiver (ntfy.sh, Home Assistant, n8n...). No SMTP/email setup needed. Covers this shared
+            collection's eBay watch hits and grading submissions past their expected return date.
+          </p>
+          <div className="form-grid">
+            <label className="checkbox-label">
+              <input type="checkbox" checked={!!settings.notify_enabled} onChange={(e) => set('notify_enabled', e.target.checked)} />
+              Enabled
+            </label>
+            <label>Webhook URL
+              <input value={settings.notify_webhook_url || ''} onChange={(e) => set('notify_webhook_url', e.target.value)} placeholder="https://discord.com/api/webhooks/..." />
+            </label>
+            <label>Hour of day (0-23, server time)
+              <input type="number" min="0" max="23" value={settings.notify_hour ?? 8} onChange={(e) => set('notify_hour', Number(e.target.value))} />
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={settings.notify_watches_enabled !== false} onChange={(e) => set('notify_watches_enabled', e.target.checked)} />
+              Include eBay watch hits
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={settings.notify_grading_enabled !== false} onChange={(e) => set('notify_grading_enabled', e.target.checked)} />
+              Include overdue grading submissions
+            </label>
+          </div>
+          <div className="cta-row">
+            <button className="btn primary" onClick={saveSettings}>Save Notification Settings</button>
+            <button className="btn" onClick={handleTestWebhook}>Send Test Webhook</button>
+            <button className="btn" onClick={handleSendDigestNow}>Send Digest Now</button>
+          </div>
+          {notifyMsg && <p className={notifyMsg.ok ? 'hint-text' : 'error-text'}>{notifyMsg.text}</p>}
         </section>
       )}
 

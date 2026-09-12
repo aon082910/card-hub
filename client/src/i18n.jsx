@@ -11,6 +11,7 @@ const DICTIONARY = {
     nav_dashboard: 'Dashboard', nav_collection: 'Collection', nav_want_list: 'Want List',
     nav_decks: 'Decks', nav_grading: 'Grading', nav_sales: 'Sales', nav_trades: 'Trades',
     nav_listings: 'Listings', nav_sets: 'Sets', nav_reports: 'Reports', nav_settings: 'Settings', nav_watches: 'Watches',
+    nav_trade_match: 'Trade Match',
 
     btn_save: 'Save', btn_delete: 'Delete', btn_cancel: 'Cancel', btn_add: 'Add',
     btn_edit: 'Edit', btn_close: 'Close', btn_search: 'Search', btn_log_out: 'Log out',
@@ -98,6 +99,13 @@ const DICTIONARY = {
     watches_add: 'Add Watch', watches_check_now: 'Check Now', watches_last_checked: 'Last Checked', watches_matches: 'Matches Under Target',
     watches_none: 'No watches yet', watches_confirm_delete: 'Delete this watch?', watches_no_matches: 'No listings under target price right now.',
 
+    trade_match_title: 'Trade Match', trade_match_hint: "Paste another Card-Hub instance's share link (their For Trade list, Want List, or collection) to see what matches your own lists.",
+    trade_match_url_ph: 'https://their-card-hub.example.com/share/abc123', trade_match_compare: 'Compare',
+    trade_match_comparing: 'Comparing...', trade_match_shared_cards: 'Shared Cards',
+    trade_match_you_have: 'They want these — here\'s what you have marked For Trade that matches.',
+    trade_match_they_have: 'They have these — here\'s what matches your Want List.',
+    trade_match_none: 'No matches found.',
+
     deck_summary_title: 'Deck Summary', deck_summary_total_cards: 'Total Cards', deck_summary_total_value: 'Total Value',
     deck_summary_by_category: 'By Category',
 
@@ -122,6 +130,7 @@ const DICTIONARY = {
     nav_dashboard: 'Panel', nav_collection: 'Colección', nav_want_list: 'Lista de Deseos',
     nav_decks: 'Mazos', nav_grading: 'Clasificación', nav_sales: 'Ventas', nav_trades: 'Intercambios',
     nav_listings: 'Publicaciones', nav_sets: 'Colecciones', nav_reports: 'Informes', nav_settings: 'Ajustes', nav_watches: 'Alertas',
+    nav_trade_match: 'Coincidencia de Intercambio',
 
     btn_save: 'Guardar', btn_delete: 'Eliminar', btn_cancel: 'Cancelar', btn_add: 'Añadir',
     btn_edit: 'Editar', btn_close: 'Cerrar', btn_search: 'Buscar', btn_log_out: 'Cerrar sesión',
@@ -209,6 +218,13 @@ const DICTIONARY = {
     watches_add: 'Añadir Alerta', watches_check_now: 'Revisar Ahora', watches_last_checked: 'Última Revisión', watches_matches: 'Coincidencias Bajo el Objetivo',
     watches_none: 'Aún no hay alertas', watches_confirm_delete: '¿Eliminar esta alerta?', watches_no_matches: 'No hay publicaciones bajo el precio objetivo por ahora.',
 
+    trade_match_title: 'Coincidencia de Intercambio', trade_match_hint: 'Pega el enlace de compartir de otra instancia de Card-Hub (su lista Para Intercambio, Lista de Deseos, o colección) para ver qué coincide con tus propias listas.',
+    trade_match_url_ph: 'https://su-card-hub.ejemplo.com/share/abc123', trade_match_compare: 'Comparar',
+    trade_match_comparing: 'Comparando...', trade_match_shared_cards: 'Cartas Compartidas',
+    trade_match_you_have: 'Ellos quieren esto — esto es lo que tienes marcado Para Intercambio que coincide.',
+    trade_match_they_have: 'Ellos tienen esto — esto coincide con tu Lista de Deseos.',
+    trade_match_none: 'No se encontraron coincidencias.',
+
     deck_summary_title: 'Resumen del Mazo', deck_summary_total_cards: 'Total de Cartas', deck_summary_total_value: 'Valor Total',
     deck_summary_by_category: 'Por Categoría',
 
@@ -233,6 +249,7 @@ const DICTIONARY = {
     nav_dashboard: 'Tableau de bord', nav_collection: 'Collection', nav_want_list: 'Liste de souhaits',
     nav_decks: 'Decks', nav_grading: 'Gradation', nav_sales: 'Ventes', nav_trades: 'Échanges',
     nav_listings: 'Annonces', nav_sets: 'Séries', nav_reports: 'Rapports', nav_settings: 'Paramètres', nav_watches: 'Alertes',
+    nav_trade_match: "Correspondance d'Échange",
 
     btn_save: 'Enregistrer', btn_delete: 'Supprimer', btn_cancel: 'Annuler', btn_add: 'Ajouter',
     btn_edit: 'Modifier', btn_close: 'Fermer', btn_search: 'Rechercher', btn_log_out: 'Se déconnecter',
@@ -319,6 +336,13 @@ const DICTIONARY = {
     watches_new: 'Nouvelle Alerte', watches_query: 'Requête de Recherche', watches_target_price: 'Prix Cible ($)',
     watches_add: "Ajouter l'Alerte", watches_check_now: 'Vérifier Maintenant', watches_last_checked: 'Dernière Vérification', watches_matches: 'Correspondances Sous le Prix Cible',
     watches_none: "Aucune alerte pour le moment", watches_confirm_delete: 'Supprimer cette alerte ?', watches_no_matches: "Aucune annonce sous le prix cible pour l'instant.",
+
+    trade_match_title: "Correspondance d'Échange", trade_match_hint: "Collez le lien de partage d'une autre instance Card-Hub (leur liste À Échanger, leur Liste de Souhaits, ou leur collection) pour voir ce qui correspond à vos propres listes.",
+    trade_match_url_ph: 'https://leur-card-hub.exemple.com/share/abc123', trade_match_compare: 'Comparer',
+    trade_match_comparing: 'Comparaison...', trade_match_shared_cards: 'Cartes Partagées',
+    trade_match_you_have: "Ils veulent ceci — voici ce que vous avez marqué À Échanger qui correspond.",
+    trade_match_they_have: 'Ils ont ceci — voici ce qui correspond à votre Liste de Souhaits.',
+    trade_match_none: 'Aucune correspondance trouvée.',
 
     deck_summary_title: 'Résumé du Deck', deck_summary_total_cards: 'Total des Cartes', deck_summary_total_value: 'Valeur Totale',
     deck_summary_by_category: 'Par Catégorie',

@@ -188,6 +188,15 @@ CREATE TABLE IF NOT EXISTS share_links (
   expires_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  label TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_used_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS ebay_watches (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   query TEXT NOT NULL,

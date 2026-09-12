@@ -110,6 +110,17 @@ export const api = {
     return request('/backups/restore-upload', { method: 'POST', body: form });
   },
 
+  checkDuplicate: (params) => request(`/cards/check-duplicate?${new URLSearchParams(params)}`),
+
+  testWebhook: () => request('/settings/test-webhook', { method: 'POST' }),
+  sendDigestNow: () => request('/settings/send-digest-now', { method: 'POST' }),
+
+  listApiTokens: () => request('/api-tokens'),
+  createApiToken: (label) => request('/api-tokens', { method: 'POST', body: JSON.stringify({ label }) }),
+  deleteApiToken: (id) => request(`/api-tokens/${id}`, { method: 'DELETE' }),
+
+  tradeMatch: (url) => request('/trade-match', { method: 'POST', body: JSON.stringify({ url }) }),
+
   previewImport: (file) => {
     const form = new FormData();
     form.append('file', file);

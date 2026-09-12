@@ -19,6 +19,16 @@ export default function AddCard() {
   const [showLookup, setShowLookup] = useState(null); // 'pokemon' | 'yugioh' | 'magic' | null
 
   async function handleSubmit(form) {
+    if (form.set_name || form.player_or_character) {
+      const dupes = await api.checkDuplicate({
+        set_name: form.set_name || '', card_number: form.card_number || '',
+        year: form.year || '', player_or_character: form.player_or_character || '',
+      }).catch(() => []);
+      if (dupes.length > 0) {
+        const names = dupes.map((d) => `#${d.id}: ${d.player_or_character || d.set_name} (qty ${d.quantity})`).join('\n');
+        if (!confirm(`This looks like a card you may already have:\n\n${names}\n\nCreate a new entry anyway?`)) return;
+      }
+    }
     const card = await api.createCard(form);
     if (pendingImage) {
       await api.importImage(card.id, pendingImage, 'front').catch(() => {});

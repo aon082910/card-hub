@@ -62,6 +62,26 @@ router.get('/', (req, res) => {
   res.json({ rows, total });
 });
 
+// Registered before '/:id' so it doesn't get swallowed as an id param. Used by Add Card
+// to warn before creating what looks like a second entry for a card already owned.
+router.get('/check-duplicate', (req, res) => {
+  const { set_name, card_number, year, player_or_character } = req.query;
+  if (!set_name && !player_or_character) return res.json([]);
+  const where = [`status != 'sold'`];
+  const params = {};
+  if (set_name) { where.push('set_name = @set_name'); params.set_name = set_name; }
+  if (card_number) { where.push('card_number = @card_number'); params.card_number = card_number; }
+  if (year) { where.push('year = @year'); params.year = year; }
+  if (player_or_character) { where.push('player_or_character = @player_or_character'); params.player_or_character = player_or_character; }
+  // Require at least a set or a number as an anchor - name alone matches too loosely.
+  if (!set_name && !card_number) return res.json([]);
+  const rows = db.prepare(`
+    SELECT id, player_or_character, set_name, card_number, year, quantity, status FROM cards
+    WHERE ${where.join(' AND ')} LIMIT 10
+  `).all(params);
+  res.json(rows);
+});
+
 router.get('/:id', (req, res) => {
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id);
   if (!card) return res.status(404).json({ error: 'not found' });
