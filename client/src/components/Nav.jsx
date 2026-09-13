@@ -58,11 +58,26 @@ export default function Nav() {
   const [theme, setTheme] = useState(getInitialTheme);
   const [unread, setUnread] = useState(0);
   const [openGroup, setOpenGroup] = useState(null);
+  const [siteTitle, setSiteTitle] = useState('Card-Hub');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem('card-hub-theme', theme); } catch { /* ignore */ }
   }, [theme]);
+
+  useEffect(() => {
+    function applyTitle(title) {
+      const t = title || 'Card-Hub';
+      setSiteTitle(t);
+      document.title = t;
+    }
+    api.getSettings().then((s) => applyTitle(s.site_title)).catch(() => {});
+    // Settings.jsx fires this on save so the brand/tab title update immediately,
+    // without needing a reload to re-fetch settings.
+    function onTitleChanged(e) { applyTitle(e.detail); }
+    window.addEventListener('site-title-changed', onTitleChanged);
+    return () => window.removeEventListener('site-title-changed', onTitleChanged);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -74,7 +89,7 @@ export default function Nav() {
 
   return (
     <header className="nav">
-      <div className="nav-brand">Card-Hub</div>
+      <div className="nav-brand">{siteTitle}</div>
       <nav className="nav-links">
         <NavLink to="/" end>{t('nav_dashboard')}</NavLink>
         <NavLink to="/collection">{t('nav_collection')}</NavLink>

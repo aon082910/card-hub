@@ -5,6 +5,7 @@ import CameraCapture from '../components/CameraCapture.jsx';
 import BarcodeScanner from '../components/BarcodeScanner.jsx';
 import OcrAssist from '../components/OcrAssist.jsx';
 import CardLookup from '../components/CardLookup.jsx';
+import ImageLightbox from '../components/ImageLightbox.jsx';
 import LineChart from '../components/LineChart.jsx';
 import { useLanguage } from '../i18n.jsx';
 import { api } from '../api.js';
@@ -27,6 +28,7 @@ export default function CardDetail() {
   const [addToDeckId, setAddToDeckId] = useState('');
   const [gradingHistory, setGradingHistory] = useState([]);
   const [shareUrl, setShareUrl] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   function load() {
     api.getCard(id).then((c) => { setCard(c); setFormKey((k) => k + 1); });
@@ -176,7 +178,7 @@ export default function CardDetail() {
         <div className="image-gallery">
           {card.images.map((img) => (
             <div className="image-thumb" key={img.id}>
-              <img src={`/images/${img.filename}`} alt={img.side} />
+              <img src={`/images/${img.filename}`} alt={img.side} onClick={() => setLightboxImg({ src: `/images/${img.filename}`, alt: img.side })} />
               <div className="image-thumb-meta">
                 <span>{img.side}</span>
                 <button className="btn small danger" onClick={() => handleDeleteImage(img.id)}>x</button>
@@ -190,6 +192,7 @@ export default function CardDetail() {
 
       {showCamera && <CameraCapture onCapture={handleCapture} onClose={() => setShowCamera(false)} />}
       {showScanner && <BarcodeScanner onDetect={handleBarcodeDetected} onClose={() => setShowScanner(false)} />}
+      {lightboxImg && <ImageLightbox src={lightboxImg.src} alt={lightboxImg.alt} onClose={() => setLightboxImg(null)} />}
 
       <section className="panel">
         <h2>{t('quick_actions_title')}</h2>

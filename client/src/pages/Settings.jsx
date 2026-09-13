@@ -122,6 +122,9 @@ export default function Settings() {
 
   async function saveSettings() {
     await api.updateSettings(settings);
+    // Nav renders the brand/tab title from its own settings fetch on mount, so it
+    // needs telling directly - otherwise it won't pick up a title change until reload.
+    window.dispatchEvent(new CustomEvent('site-title-changed', { detail: settings.site_title }));
     setSaveMsg('Saved.');
     setTimeout(() => setSaveMsg(null), 2000);
     load();

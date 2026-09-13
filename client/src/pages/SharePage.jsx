@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import ImageLightbox from '../components/ImageLightbox.jsx';
 
 export default function SharePage() {
   const { token } = useParams();
   const [data, setData] = useState(undefined);
   const [error, setError] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   useEffect(() => {
     fetch(`/api/public/share/${token}`)
@@ -31,7 +33,7 @@ export default function SharePage() {
             <div className="image-gallery">
               {data.cards.map((c) => (
                 <div className="image-thumb" style={{ width: 180 }} key={c.id}>
-                  {c.image && <img src={c.image} alt={c.player_or_character} style={{ height: 140 }} />}
+                  {c.image && <img src={c.image} alt={c.player_or_character} style={{ height: 180 }} onClick={() => setLightboxImg({ src: c.image, alt: c.player_or_character })} />}
                   <div style={{ padding: '0.5rem' }}>
                     <strong>{c.player_or_character || c.set_name}</strong>
                     <p className="hint-text" style={{ margin: '0.25rem 0' }}>
@@ -49,6 +51,7 @@ export default function SharePage() {
           </div>
         )}
       </main>
+      {lightboxImg && <ImageLightbox src={lightboxImg.src} alt={lightboxImg.alt} onClose={() => setLightboxImg(null)} />}
     </div>
   );
 }
