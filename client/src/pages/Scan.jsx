@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n.jsx';
 import { api } from '../api.js';
-import { extractCardText } from '../ocr.js';
+import { runOcr } from '../ocr.js';
 
 const SAMPLE_W = 48;
 const SAMPLE_H = 32;
@@ -33,7 +33,7 @@ const LOOKUP_GAMES = [
 // card against all three card databases and takes the first hit, so a batch-scanned
 // card can land on its detail page already filled in instead of blank.
 async function identifyCard(imageUrl) {
-  const lines = (await extractCardText(imageUrl)).slice(0, 5);
+  const lines = (await runOcr(imageUrl)).slice(0, 5);
   for (const line of lines) {
     for (const game of LOOKUP_GAMES) {
       let rows;

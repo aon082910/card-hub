@@ -137,6 +137,12 @@ export const api = {
   testWebhook: () => request('/settings/test-webhook', { method: 'POST' }),
   sendDigestNow: () => request('/settings/send-digest-now', { method: 'POST' }),
 
+  ocrExtract: (blob) => {
+    const form = new FormData();
+    form.append('image', blob, 'ocr.jpg');
+    return request('/ocr', { method: 'POST', body: form });
+  },
+
   listApiTokens: () => request('/api-tokens'),
   createApiToken: (label) => request('/api-tokens', { method: 'POST', body: JSON.stringify({ label }) }),
   deleteApiToken: (id) => request(`/api-tokens/${id}`, { method: 'DELETE' }),

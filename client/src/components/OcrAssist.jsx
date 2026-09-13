@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
-import { extractCardText } from '../ocr.js';
+import { runOcr, extractCroppedText } from '../ocr.js';
+import ImageCropper from './ImageCropper.jsx';
 
 const GAMES = [
   { key: 'pokemon', label: 'Pokemon', lookup: (q) => api.lookupPokemon(q) },
@@ -8,11 +9,12 @@ const GAMES = [
   { key: 'magic', label: 'Magic', lookup: (q) => api.lookupMagic(q) },
 ];
 
-// On-device OCR (tesseract.js) reads raw text off a card photo, then cross-references
-// the most likely candidate lines against the same live card databases the 🔍 Look Up
-// buttons use (TCGdex/YGOPRODeck/Scryfall) - a real, working "what card is this"
-// pipeline built from OCR + name search, rather than true image-based visual
-// recognition (which would need a licensed card-image dataset or a trained model).
+// OCR reads raw text off a card photo, then cross-references the most likely candidate
+// lines against the same live card databases the 🔍 Look Up buttons use (TCGdex/
+// YGOPRODeck/Scryfall) - a real, working "what card is this" pipeline built from OCR +
+// name search, rather than true image-based visual recognition. Provider (local
+// Tesseract vs. Surya) is chosen in Settings -> OCR Provider; a manual crop is always
+// available for anyone who'd rather point right at the text than rely on auto-detection.
 export default function OcrAssist({ imageUrl, onPick }) {
   const [lines, setLines] = useState(null);
   const [running, setRunning] = useState(false);
@@ -20,20 +22,26 @@ export default function OcrAssist({ imageUrl, onPick }) {
   const [copied, setCopied] = useState(null);
   const [matching, setMatching] = useState(null); // { line, game } while searching
   const [matches, setMatches] = useState(null); // { line, game, results }
+  const [cropping, setCropping] = useState(false);
 
-  async function runOcr() {
+  async function handleExtract(sourceUrl, ocrFn = runOcr) {
     setRunning(true);
     setError(null);
     setLines(null);
     setMatches(null);
     try {
-      const found = await extractCardText(imageUrl);
+      const found = await ocrFn(sourceUrl);
       setLines(found.length ? found : ['(no text detected)']);
     } catch (e) {
       setError(e.message || 'OCR failed');
     } finally {
       setRunning(false);
     }
+  }
+
+  function handleCropConfirm(croppedUrl) {
+    setCropping(false);
+    handleExtract(croppedUrl, extractCroppedText);
   }
 
   async function copy(line) {
@@ -69,7 +77,10 @@ export default function OcrAssist({ imageUrl, onPick }) {
 
   return (
     <div className="ocr-assist">
-      <button className="btn" onClick={runOcr} disabled={running}>{running ? 'Reading card...' : '🔎 Extract Text (OCR)'}</button>
+      <div className="cta-row">
+        <button className="btn" onClick={() => handleExtract(imageUrl)} disabled={running}>{running ? 'Reading card...' : '🔎 Extract Text (OCR)'}</button>
+        <button className="btn" onClick={() => setCropping(true)} disabled={running}>✂️ Crop &amp; Extract Text</button>
+      </div>
       {error && <p className="error-text">{error}</p>}
       {lines && (
         <ul className="ocr-lines">
@@ -99,6 +110,7 @@ export default function OcrAssist({ imageUrl, onPick }) {
           {matches.results.length === 0 && <p className="hint-text">No matches found for "{matches.line}".</p>}
         </div>
       )}
+      {cropping && <ImageCropper imageUrl={imageUrl} onConfirm={handleCropConfirm} onCancel={() => setCropping(false)} />}
     </div>
   );
 }

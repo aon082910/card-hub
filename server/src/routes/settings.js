@@ -8,7 +8,7 @@ const router = express.Router();
 // A webhook URL counts as a secret too - most providers (Discord, Slack) treat the URL itself
 // as a bearer credential that can post to your channel.
 const SECRET_KEYS = new Set([
-  'ebay_client_secret', 'pokewallet_api_key', 'tcgplayer_client_secret', 'notify_webhook_url',
+  'ebay_client_secret', 'pokewallet_api_key', 'tcgplayer_client_secret', 'notify_webhook_url', 'surya_api_key',
 ]);
 
 const PUBLIC_KEYS = [
@@ -20,6 +20,7 @@ const PUBLIC_KEYS = [
   'ebay_payment_policy_id', 'ebay_return_policy_id', 'ebay_fulfillment_policy_id',
   'ebay_merchant_location_key', 'ebay_default_category_id',
   'tcgplayer_client_id', 'tcgplayer_client_secret',
+  'ocr_provider', 'surya_endpoint_url', 'surya_api_key',
 ];
 
 router.get('/', (req, res) => {

@@ -1,3 +1,5 @@
+import { api } from './api.js';
+
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -106,4 +108,43 @@ export async function extractCardText(imageUrl) {
     }
   }
   return lines;
+}
+
+// A manually-cropped region: the user already pointed at exactly the text they want,
+// so there's no need to guess a name band or run a second full-image pass - one
+// SINGLE_BLOCK pass (the selection may be more than one line, e.g. name + subtitle)
+// against local Tesseract is enough, and keeps this path fully free/local regardless
+// of whatever provider is configured for the automatic pipeline.
+export async function extractCroppedText(imageUrl) {
+  const [canvas, { PSM }, worker] = await Promise.all([preprocess(imageUrl), getTesseract(), getWorker()]);
+  return recognizeLines(worker, canvas, PSM.SINGLE_BLOCK);
+}
+
+async function extractCardTextViaServer(imageUrl) {
+  const resp = await fetch(imageUrl);
+  const blob = await resp.blob();
+  const result = await api.ocrExtract(blob);
+  return result.lines || [];
+}
+
+// Provider-aware entry point: checks Settings -> OCR Provider and routes to the local
+// Tesseract pipeline (default, free, runs entirely in-browser) or a server-side Surya
+// OCR call (self-hosted endpoint or Datalab's hosted API, admin-configured in Settings).
+// Falls back to local Tesseract if Surya is selected but unreachable/misconfigured,
+// rather than failing the whole OCR attempt.
+export async function runOcr(imageUrl) {
+  let provider = 'tesseract';
+  try {
+    const settings = await api.getSettings();
+    if (settings.ocr_provider === 'surya') provider = 'surya';
+  } catch { /* fall back to tesseract */ }
+
+  if (provider === 'surya') {
+    try {
+      return await extractCardTextViaServer(imageUrl);
+    } catch (e) {
+      console.warn('Surya OCR failed, falling back to local OCR:', e.message);
+    }
+  }
+  return extractCardText(imageUrl);
 }

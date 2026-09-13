@@ -476,6 +476,56 @@ export default function Settings() {
         </p>
       </section>
 
+      {user?.role === 'admin' && (
+        <section className="panel">
+          <h2>OCR Provider</h2>
+          <p className="hint-text">
+            Used by "Extract Text" (a card's detail page) and the Scan page's automatic card identification.
+            <strong> Tesseract</strong> runs entirely in-browser, free, no setup. <strong>Surya</strong> is a
+            vision-language OCR model that reads stylized card text over artwork far more reliably, but needs
+            somewhere to actually run it — either your own self-hosted endpoint, or Datalab's (the company behind
+            Surya) hosted API with an API key. If Surya is selected but unreachable or misconfigured, OCR
+            automatically falls back to Tesseract rather than failing outright. The manual crop tool ("✂️ Crop &amp;
+            Extract Text") always uses local Tesseract regardless of this setting, since a hand-picked region rarely
+            needs Surya's help.
+          </p>
+          <div className="form-grid">
+            <label>Provider
+              <select value={settings.ocr_provider || 'tesseract'} onChange={(e) => set('ocr_provider', e.target.value)}>
+                <option value="tesseract">Tesseract (local, free)</option>
+                <option value="surya">Surya (self-hosted or Datalab API)</option>
+              </select>
+            </label>
+          </div>
+          <div className="api-key-row">
+            <div className="api-key-info">
+              <strong>Surya - Self-Hosted Endpoint</strong>
+              <p className="hint-text">
+                Point at your own HTTP endpoint (e.g. a small wrapper you run around the <code>surya-ocr</code> Python
+                package on your own machine/GPU). Expected contract: POST multipart/form-data with a "file" field;
+                JSON response shaped either <code>{'{ "text": "..." }'}</code> (newline-separated) or{' '}
+                <code>{'{ "lines": ["...", "..."] }'}</code>.
+              </p>
+            </div>
+            <input value={settings.surya_endpoint_url || ''} onChange={(e) => set('surya_endpoint_url', e.target.value)} placeholder="http://192.168.1.50:8000/ocr" />
+          </div>
+          <div className="api-key-row">
+            <div className="api-key-info">
+              <strong>Surya - Datalab Hosted API</strong>
+              <p className="hint-text">
+                Alternative to self-hosting: an API key from <a href="https://www.datalab.to/" target="_blank" rel="noreferrer">datalab.to</a>.
+                If both a self-hosted URL and an API key are set, the API key takes priority.
+              </p>
+            </div>
+            <input value={settings.surya_api_key || ''} onChange={(e) => set('surya_api_key', e.target.value)} placeholder="API key" />
+          </div>
+          <div className="cta-row">
+            <button className="btn primary" onClick={saveSettings}>Save OCR Settings</button>
+            {saveMsg && <span className="hint-text">{saveMsg}</span>}
+          </div>
+        </section>
+      )}
+
       <section className="panel">
         <h2>Appearance</h2>
         <div className="form-grid">
