@@ -46,7 +46,7 @@ const DICTIONARY = {
     status_owned: 'Owned', status_wanted: 'Wanted', status_listed: 'Listed', status_sold: 'Sold', status_archived: 'Archived',
 
     login_title: 'Card-Hub', login_subtitle: 'Sign in to your collection.', login_username: 'Username', login_password: 'Password',
-    login_signing_in: 'Signing in...', login_sign_in: 'Sign In', login_error: 'Invalid username or password.',
+    login_signing_in: 'Signing in...', login_sign_in: 'Sign In', login_error: 'Invalid username or password.', login_network_error: 'Cannot reach server.', login_server_error: 'Server error — please try again later.',
     login_first_time: 'First time? Default login is', login_change_after: '— change it from Settings after signing in.',
 
     col_card: 'Card', col_price: 'Price', col_fees: 'Fees', col_shipping: 'Shipping', col_platform: 'Platform',
@@ -167,7 +167,7 @@ const DICTIONARY = {
     status_owned: 'En posesión', status_wanted: 'Deseada', status_listed: 'Publicada', status_sold: 'Vendida', status_archived: 'Archivada',
 
     login_title: 'Card-Hub', login_subtitle: 'Inicia sesión en tu colección.', login_username: 'Usuario', login_password: 'Contraseña',
-    login_signing_in: 'Iniciando sesión...', login_sign_in: 'Iniciar Sesión', login_error: 'Usuario o contraseña incorrectos.',
+    login_signing_in: 'Iniciando sesión...', login_sign_in: 'Iniciar Sesión', login_error: 'Usuario o contraseña incorrectos.', login_network_error: 'No se puede conectar al servidor.', login_server_error: 'Error del servidor — inténtalo de nuevo más tarde.',
     login_first_time: '¿Primera vez? El inicio de sesión predeterminado es', login_change_after: '— cámbialo desde Ajustes después de iniciar sesión.',
 
     col_card: 'Carta', col_price: 'Precio', col_fees: 'Comisiones', col_shipping: 'Envío', col_platform: 'Plataforma',
@@ -288,7 +288,7 @@ const DICTIONARY = {
     status_owned: 'Possédée', status_wanted: 'Recherchée', status_listed: 'En vente', status_sold: 'Vendue', status_archived: 'Archivée',
 
     login_title: 'Card-Hub', login_subtitle: 'Connectez-vous à votre collection.', login_username: "Nom d'utilisateur", login_password: 'Mot de passe',
-    login_signing_in: 'Connexion...', login_sign_in: 'Se Connecter', login_error: "Nom d'utilisateur ou mot de passe invalide.",
+    login_signing_in: 'Connexion...', login_sign_in: 'Se Connecter', login_error: "Nom d'utilisateur ou mot de passe invalide.", login_network_error: 'Impossible de joindre le serveur.', login_server_error: 'Erreur serveur — veuillez réessayer plus tard.',
     login_first_time: 'Première fois ? La connexion par défaut est', login_change_after: '— changez-la depuis Paramètres après vous être connecté.',
 
     col_card: 'Carte', col_price: 'Prix', col_fees: 'Frais', col_shipping: 'Livraison', col_platform: 'Plateforme',

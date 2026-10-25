@@ -11,11 +11,23 @@ const SCRYFALL_BASE = 'https://api.scryfall.com';
 // User-Agent identifying the app - Node's default fetch UA gets a hard 400 from Scryfall.
 const APP_HEADERS = { 'User-Agent': 'Card-Hub/1.0 (self-hosted collection manager)', Accept: 'application/json' };
 
+function parsePokemonQuery(query) {
+  const trimmed = query.trim();
+  const m = trimmed.match(/^(.*?)\s+(?:#?(\d+))$/);
+  if (m) return { name: m[1].trim(), localId: m[2] };
+  return { name: trimmed };
+}
+
 async function searchPokemon(query) {
-  const res = await fetch(`${TCGDEX_BASE}/cards?name=${encodeURIComponent(query)}`, { headers: APP_HEADERS });
+  const parsed = parsePokemonQuery(query);
+  const params = new URLSearchParams();
+  if (parsed.name) params.set('name', parsed.name);
+  if (parsed.localId) params.set('localId', parsed.localId);
+
+  const res = await fetch(`${TCGDEX_BASE}/cards?${params.toString()}`, { headers: APP_HEADERS });
   if (!res.ok) throw new Error(`TCGdex search failed (${res.status})`);
   const rows = await res.json();
-  return rows.slice(0, 30).map((r) => ({
+  return rows.map((r) => ({
     source: 'tcgdex',
     id: r.id,
     name: r.name,
@@ -59,7 +71,7 @@ async function searchYugioh(query) {
   if (res.status === 400) return []; // API returns 400 when nothing matches
   if (!res.ok) throw new Error(`YGOPRODeck search failed (${res.status})`);
   const json = await res.json();
-  return (json.data || []).slice(0, 30).map((c) => ({
+  return (json.data || []).map((c) => ({
     source: 'ygoprodeck',
     id: String(c.id),
     name: c.name,
@@ -94,7 +106,7 @@ async function searchMagic(query) {
   if (res.status === 404) return []; // Scryfall returns 404 when nothing matches
   if (!res.ok) throw new Error(`Scryfall search failed (${res.status})`);
   const json = await res.json();
-  return (json.data || []).slice(0, 30).map((c) => ({
+  return (json.data || []).map((c) => ({
     source: 'scryfall',
     id: c.id,
     name: c.name,

@@ -36,12 +36,13 @@ async function identifyCard(imageUrl) {
   const lines = (await runOcr(imageUrl)).slice(0, 5);
   for (const line of lines) {
     for (const game of LOOKUP_GAMES) {
-      let rows;
+      let data;
       try {
-        rows = await game.lookup(line);
+        data = await game.lookup(line);
       } catch {
         continue;
       }
+      const rows = data && data.results ? data.results : data;
       if (!rows || !rows.length) continue;
       let row = rows[0];
       if (game.key === 'pokemon' && row.source === 'tcgdex') {

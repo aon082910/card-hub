@@ -57,8 +57,8 @@ export default function OcrAssist({ imageUrl, onPick }) {
     setMatches(null);
     setError(null);
     try {
-      const results = await game.lookup(line);
-      setMatches({ line, game: game.key, results });
+      const data = await game.lookup(line);
+      setMatches({ line, game: game.key, results: data.results || data, truncated: data.truncated || false });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -108,6 +108,11 @@ export default function OcrAssist({ imageUrl, onPick }) {
             </button>
           ))}
           {matches.results.length === 0 && <p className="hint-text">No matches found for "{matches.line}".</p>}
+          {matches.truncated && (
+            <p className="hint-text" style={{ color: '#e8a838' }}>
+              ⚠️ Over 31 matches found — try adding a card number or set name to narrow your search.
+            </p>
+          )}
         </div>
       )}
       {cropping && <ImageCropper imageUrl={imageUrl} onConfirm={handleCropConfirm} onCancel={() => setCropping(false)} />}

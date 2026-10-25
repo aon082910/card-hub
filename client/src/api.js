@@ -1,10 +1,17 @@
 const BASE = '/api';
 
 async function request(path, opts = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: opts.body && !(opts.body instanceof FormData) ? { 'Content-Type': 'application/json' } : undefined,
-    ...opts,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: opts.body && !(opts.body instanceof FormData) ? { 'Content-Type': 'application/json' } : undefined,
+      ...opts,
+    });
+  } catch (networkErr) {
+    const err = new Error(networkErr.message || 'Network error');
+    err.status = 0;
+    throw err;
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     const err = new Error(`${res.status} ${res.statusText}: ${text}`);

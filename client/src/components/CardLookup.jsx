@@ -12,6 +12,7 @@ const PLACEHOLDERS = {
 export default function CardLookup({ game, onPick }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState(null);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -20,11 +21,9 @@ export default function CardLookup({ game, onPick }) {
     setLoading(true);
     setError(null);
     try {
-      let rows;
-      if (game === 'yugioh') rows = await api.lookupYugioh(q);
-      else if (game === 'magic') rows = await api.lookupMagic(q);
-      else rows = await api.lookupPokemon(q);
-      setResults(rows);
+      const data = await (game === 'yugioh' ? api.lookupYugioh(q) : game === 'magic' ? api.lookupMagic(q) : api.lookupPokemon(q));
+      setResults(data.results || data);
+      setTruncated(data.truncated || false);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -67,6 +66,11 @@ export default function CardLookup({ game, onPick }) {
             </button>
           ))}
           {results.length === 0 && <p className="hint-text">No matches found.</p>}
+          {truncated && (
+            <p className="hint-text" style={{ color: '#e8a838' }}>
+              ⚠️ Over 31 matches found — try adding a card number or set name to narrow your search (e.g. "Lycanroc 166").
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -4,15 +4,21 @@ const { searchPokemon, getPokemonCard, searchYugioh, pokewalletLookup, searchMag
 
 const router = express.Router();
 
-router.get('/pokemon', async (req, res) => {
-  const q = req.query.q;
-  if (!q) return res.status(400).json({ error: 'q required' });
-  try {
-    res.json(await searchPokemon(q));
-  } catch (e) {
-    res.status(502).json({ error: e.message });
-  }
-});
+function wrapLookup(searchFn) {
+  return async (req, res) => {
+    const q = req.query.q;
+    if (!q) return res.status(400).json({ error: 'q required' });
+    try {
+      const results = await searchFn(q);
+      const truncated = results.length > 31;
+      res.json({ results: results.slice(0, 31), truncated });
+    } catch (e) {
+      res.status(502).json({ error: e.message });
+    }
+  };
+}
+
+router.get('/pokemon', wrapLookup(searchPokemon));
 
 router.get('/pokemon/:id', async (req, res) => {
   try {
@@ -22,15 +28,7 @@ router.get('/pokemon/:id', async (req, res) => {
   }
 });
 
-router.get('/yugioh', async (req, res) => {
-  const q = req.query.q;
-  if (!q) return res.status(400).json({ error: 'q required' });
-  try {
-    res.json(await searchYugioh(q));
-  } catch (e) {
-    res.status(502).json({ error: e.message });
-  }
-});
+router.get('/yugioh', wrapLookup(searchYugioh));
 
 router.get('/pokewallet', async (req, res) => {
   const q = req.query.q;
@@ -42,14 +40,6 @@ router.get('/pokewallet', async (req, res) => {
   }
 });
 
-router.get('/magic', async (req, res) => {
-  const q = req.query.q;
-  if (!q) return res.status(400).json({ error: 'q required' });
-  try {
-    res.json(await searchMagic(q));
-  } catch (e) {
-    res.status(502).json({ error: e.message });
-  }
-});
+router.get('/magic', wrapLookup(searchMagic));
 
 module.exports = router;

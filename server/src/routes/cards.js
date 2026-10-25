@@ -82,7 +82,7 @@ router.get('/check-duplicate', (req, res) => {
   // Require at least a set or a number as an anchor - name alone matches too loosely.
   if (!set_name && !card_number) return res.json([]);
   const rows = db.prepare(`
-    SELECT id, player_or_character, set_name, card_number, year, quantity, status FROM cards
+    SELECT id, player_or_character, set_name, card_number, year, quantity, status, parallel_variant FROM cards
     WHERE ${where.join(' AND ')} LIMIT 10
   `).all(params);
   res.json(rows);

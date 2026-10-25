@@ -147,7 +147,9 @@ export default function CardForm({ initial, onSubmit, submitLabel }) {
       <label className="full-width">{t('field_notes')}
         <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} />
       </label>
-      <button className="btn primary" type="submit">{submitLabel || t('btn_save')}</button>
+      <div className="form-sticky-footer">
+        <button className="btn primary" type="submit">{submitLabel || t('btn_save')}</button>
+      </div>
     </form>
   );
 }

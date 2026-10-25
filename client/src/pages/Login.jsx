@@ -11,6 +11,12 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
+  function errorMessage(err) {
+    if (!err || err.status === 0) return t('login_network_error');
+    if (err.status >= 500) return t('login_server_error');
+    return t('login_error');
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setBusy(true);
@@ -18,7 +24,7 @@ export default function Login() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(t('login_error'));
+      setError(errorMessage(err));
     } finally {
       setBusy(false);
     }

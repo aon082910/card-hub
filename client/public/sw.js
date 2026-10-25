@@ -1,4 +1,4 @@
-const CACHE_NAME = 'card-hub-shell-v1';
+const CACHE_NAME = '__CACHE_VERSION__';
 const SHELL_URLS = ['/', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

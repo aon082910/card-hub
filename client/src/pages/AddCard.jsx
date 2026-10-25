@@ -16,24 +16,57 @@ export default function AddCard() {
   const [prefill, setPrefill] = useState(() => location.state?.prefill || null);
   const [formKey, setFormKey] = useState(0);
   const [pendingImage, setPendingImage] = useState(null);
-  const [showLookup, setShowLookup] = useState(null); // 'pokemon' | 'yugioh' | 'magic' | null
+  const [showLookup, setShowLookup] = useState(() => location.state?.gameType || null); // 'pokemon' | 'yugioh' | 'magic' | null
 
-  async function handleSubmit(form) {
-    if (form.set_name || form.player_or_character) {
-      const dupes = await api.checkDuplicate({
-        set_name: form.set_name || '', card_number: form.card_number || '',
-        year: form.year || '', player_or_character: form.player_or_character || '',
-      }).catch(() => []);
-      if (dupes.length > 0) {
-        const names = dupes.map((d) => `#${d.id}: ${d.player_or_character || d.set_name} (qty ${d.quantity})`).join('\n');
-        if (!confirm(`This looks like a card you may already have:\n\n${names}\n\nCreate a new entry anyway?`)) return;
-      }
-    }
+  // Duplicate resolution state
+  const [dupes, setDupes] = useState(null);
+  const [pendingForm, setPendingForm] = useState(null);
+  const [variantText, setVariantText] = useState('');
+
+  async function finalizeCreate(form) {
     const card = await api.createCard(form);
     if (pendingImage) {
       await api.importImage(card.id, pendingImage, 'front').catch(() => {});
     }
-    navigate(`/collection/${card.id}`);
+    navigate(`/collection/${card.id}?added=1`);
+  }
+
+  async function handleSubmit(form) {
+    if (form.set_name || form.player_or_character) {
+      const results = await api.checkDuplicate({
+        set_name: form.set_name || '', card_number: form.card_number || '',
+        year: form.year || '', player_or_character: form.player_or_character || '',
+      }).catch(() => []);
+      if (results.length > 0) {
+        setDupes(results);
+        setPendingForm(form);
+        return;
+      }
+    }
+    await finalizeCreate(form);
+  }
+
+  async function handleIncreaseQty(dupe, increment) {
+    const newQty = (dupe.quantity || 0) + (increment || 1);
+    await api.updateCard(dupe.id, { quantity: newQty });
+    navigate(`/collection/${dupe.id}?added=1`);
+  }
+
+  async function handleAddVariant() {
+    if (!pendingForm) return;
+    const form = { ...pendingForm, parallel_variant: variantText.trim() || '' };
+    await finalizeCreate(form);
+  }
+
+  async function handleCreateClone() {
+    if (!pendingForm) return;
+    await finalizeCreate(pendingForm);
+  }
+
+  function handleCancelDupes() {
+    setDupes(null);
+    setPendingForm(null);
+    setVariantText('');
   }
 
   function handlePick(result) {
@@ -67,7 +100,57 @@ export default function AddCard() {
         {pendingImage && <p className="hint-text">Image selected — it will attach once you create the card.</p>}
       </section>
 
-      <CardForm key={formKey} initial={prefill} onSubmit={handleSubmit} submitLabel={t('btn_create_card')} />
+      {dupes && (
+        <section className="panel dupe-panel">
+          <h2>⚠️ Card Already Exists</h2>
+          <p className="hint-text">This card may already be in your collection. Choose how to proceed:</p>
+
+          <div className="dupe-options">
+            {dupes.map((d) => (
+              <div key={d.id} className="dupe-card-row">
+                <div className="dupe-info">
+                  <strong>#{d.id} — {d.player_or_character || d.set_name}</strong>
+                  <span className="dupe-meta">
+                    {d.card_number && <># {d.card_number} · </>}
+                    {d.year && <>{d.year} · </>}
+                    Qty: <strong>{d.quantity}</strong>
+                    {d.parallel_variant && <> · Variant: {d.parallel_variant}</>}
+                  </span>
+                </div>
+                <button className="btn primary" onClick={() => handleIncreaseQty(d, pendingForm?.quantity || 1)}>
+                  +{(pendingForm?.quantity || 1)} to Qty
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="dupe-divider" />
+
+          <div className="dupe-action-row">
+            <label className="dupe-variant-input">
+              <span>Add as variant:</span>
+              <input
+                type="text"
+                value={variantText}
+                onChange={(e) => setVariantText(e.target.value)}
+                placeholder="e.g. Reverse Holo, Foil, 1st Edition..."
+              />
+            </label>
+            <button className="btn" onClick={handleAddVariant} disabled={!variantText.trim()}>
+              Create with Variant
+            </button>
+          </div>
+
+          <div className="dupe-divider" />
+
+          <div className="dupe-action-row dupe-final-row">
+            <button className="btn" onClick={handleCreateClone}>⧉ Create Clone Anyway</button>
+            <button className="btn danger" onClick={handleCancelDupes}>Cancel</button>
+          </div>
+        </section>
+      )}
+
+      {!dupes && <CardForm key={formKey} initial={prefill} onSubmit={handleSubmit} submitLabel={t('btn_create_card')} />}
     </div>
   );
 }
